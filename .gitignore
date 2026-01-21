@@ -47,3 +47,7 @@ next-env.d.ts
 *.njsproj
 *.sln
 *.sw?
+
+# YouTube downloader cache files (ytdl-core)
+*player-script*.js
+youtube-*.mp3

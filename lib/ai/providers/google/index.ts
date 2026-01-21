@@ -1,4 +1,4 @@
-import { GoogleGenAI, FileState } from '@google/genai';
+import { GoogleGenAI, FileState, createUserContent, createPartFromUri } from '@google/genai';
 import {
   AITranscriptionProvider,
   TranscriptionInput,
@@ -44,7 +44,7 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
   constructor(config?: GoogleProviderConfig) {
     this.config = {
       apiKey: config?.apiKey || process.env.GEMINI_API_KEY || '',
-      model: config?.model || 'gemini-2.0-flash',
+      model: config?.model || process.env.GEMINI_MODEL || 'gemini-2.0-flash',
       pollingIntervalMs: config?.pollingIntervalMs || 2000,
     };
 
@@ -109,22 +109,17 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
     const prompt = buildTranscriptionPrompt({
       targetLanguage: config.targetLanguage,
       enableSpeakerIdentification: config.enableSpeakerIdentification,
+      enableTimestamps: config.enableTimestamps,
+      durationSeconds: config.durationSeconds,
       customInstructions: config.customInstructions,
     });
 
     const response = await this.client.models.generateContent({
       model: this.config.model,
-      contents: {
-        parts: [
-          {
-            fileData: {
-              fileUri: fileMetadata.uri!,
-              mimeType: fileMetadata.mimeType!,
-            },
-          },
-          { text: prompt },
-        ],
-      },
+      contents: createUserContent([
+        createPartFromUri(fileMetadata.uri!, fileMetadata.mimeType!),
+        prompt,
+      ]),
     });
 
     // Clean up: delete the uploaded file

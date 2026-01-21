@@ -17,12 +17,44 @@ export default function Home() {
   const handleStartProcessing = async (config: UploadConfig) => {
     setErrorMsg(null);
 
-    if (config.mode === 'url') {
-      setStatus(AppStatus.IDLE);
-      alert('Please use the File Upload tab for this demo. Direct YouTube URL access requires additional backend setup.');
+    // Handle YouTube URL mode
+    if (config.mode === 'url' && config.youtubeUrl) {
+      setStatus(AppStatus.PROCESSING);
+      setCurrentFileName(config.youtubeUrl);
+
+      try {
+        const response = await fetch('/api/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ youtubeUrl: config.youtubeUrl }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to process YouTube video');
+        }
+
+        setResult(data);
+        setStatus(AppStatus.COMPLETED);
+
+        // Save to localStorage with video title as fileName
+        saveTranscription(
+          data.text,
+          data.fileName || config.youtubeUrl,
+          data.metadata?.model?.includes('gemini') ? 'google-gemini' : data.metadata?.model?.includes('whisper') ? 'openai' : undefined,
+          data.metadata
+        );
+      } catch (err: unknown) {
+        console.error('YouTube Processing Error:', err);
+        const message = err instanceof Error ? err.message : 'Failed to process YouTube video. Please try again.';
+        setErrorMsg(message);
+        setStatus(AppStatus.ERROR);
+      }
       return;
     }
 
+    // Handle file upload mode
     if (config.mode === 'file' && config.file) {
       setStatus(AppStatus.PROCESSING);
       setCurrentFileName(config.file.name);

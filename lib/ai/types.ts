@@ -6,6 +6,10 @@ export interface TranscriptionConfig {
   targetLanguage: string;
   /** Whether to identify different speakers */
   enableSpeakerIdentification: boolean;
+  /** Whether to include timestamps in transcription */
+  enableTimestamps?: boolean;
+  /** Video/audio duration in seconds (used for timestamp validation) */
+  durationSeconds?: number;
   /** Custom prompt additions (optional) */
   customInstructions?: string;
 }

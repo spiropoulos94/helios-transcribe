@@ -136,10 +136,10 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
                 />
               </div>
               
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-amber-800 leading-relaxed">
-                  <strong>Demo Restriction:</strong> Direct YouTube extraction requires a backend server to bypass browser CORS policies. For this client-side demo, please <strong>download the video</strong> and use the "Upload File" tab.
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-green-800 leading-relaxed">
+                  Enter a YouTube URL to transcribe the video's audio directly into Greek text.
                 </p>
               </div>
 
