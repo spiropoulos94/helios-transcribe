@@ -13,7 +13,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "@google/genai": "^1.37.0",
-    "lucide-react": "^0.562.0"
+    "lucide-react": "^0.562.0",
+    "openai": "^4.77.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

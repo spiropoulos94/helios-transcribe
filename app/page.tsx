@@ -1,16 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { InputSection } from '@/components/InputSection';
 import { TranscriptView } from '@/components/TranscriptView';
+import { TranscriptionHistory } from '@/components/TranscriptionHistory';
 import { AppStatus, TranscriptionResult, UploadConfig } from '@/types';
+import { saveTranscription } from '@/lib/storage';
 import { Loader2, AlertTriangle } from 'lucide-react';
 
 export default function Home() {
   const [status, setStatus] = useState<AppStatus>(AppStatus.IDLE);
   const [result, setResult] = useState<TranscriptionResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [currentFileName, setCurrentFileName] = useState<string>('');
+  const [historyKey, setHistoryKey] = useState(0);
 
   const handleStartProcessing = async (config: UploadConfig) => {
     setErrorMsg(null);
@@ -23,6 +27,8 @@ export default function Home() {
 
     if (config.mode === 'file' && config.file) {
       setStatus(AppStatus.PROCESSING);
+      setCurrentFileName(config.file.name);
+
       try {
         const formData = new FormData();
         formData.append('file', config.file);
@@ -40,6 +46,17 @@ export default function Home() {
 
         setResult(data);
         setStatus(AppStatus.COMPLETED);
+
+        // Save to localStorage
+        saveTranscription(
+          data.text,
+          config.file.name,
+          data.metadata?.model?.includes('gemini') ? 'google-gemini' : data.metadata?.model?.includes('whisper') ? 'openai' : undefined,
+          data.metadata
+        );
+
+        // Trigger history refresh
+        setHistoryKey((prev) => prev + 1);
       } catch (err: unknown) {
         console.error(err);
         const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
@@ -53,6 +70,7 @@ export default function Home() {
     setStatus(AppStatus.IDLE);
     setResult(null);
     setErrorMsg(null);
+    setCurrentFileName('');
   };
 
   return (
@@ -119,6 +137,11 @@ export default function Home() {
               Transcribe another file
             </button>
           </div>
+        )}
+
+        {/* Transcription History */}
+        {status === AppStatus.IDLE && (
+          <TranscriptionHistory key={historyKey} />
         )}
 
       </main>
