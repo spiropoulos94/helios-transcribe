@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, FileState } from '@google/genai';
 
 export async function POST(request: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -22,13 +22,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert file to base64
-    const arrayBuffer = await file.arrayBuffer();
-    const base64Data = Buffer.from(arrayBuffer).toString('base64');
-    const mimeType = file.type;
-
     const ai = new GoogleGenAI({ apiKey });
     const modelId = 'gemini-2.0-flash';
+
+    // Upload file using the File API
+    const arrayBuffer = await file.arrayBuffer();
+    const uploadedFile = await ai.files.upload({
+      file: new Blob([arrayBuffer], { type: file.type }),
+      config: {
+        mimeType: file.type,
+        displayName: file.name,
+      },
+    });
+
+    // Wait for file to be processed
+    let fileMetadata = await ai.files.get({ name: uploadedFile.name! });
+    while (fileMetadata.state === FileState.PROCESSING) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      fileMetadata = await ai.files.get({ name: uploadedFile.name! });
+    }
+
+    if (fileMetadata.state === FileState.FAILED) {
+      throw new Error('File processing failed');
+    }
 
     const prompt = `
       You are an expert transcriber and translator.
@@ -49,9 +65,9 @@ export async function POST(request: NextRequest) {
       contents: {
         parts: [
           {
-            inlineData: {
-              mimeType: mimeType,
-              data: base64Data,
+            fileData: {
+              fileUri: fileMetadata.uri!,
+              mimeType: fileMetadata.mimeType!,
             },
           },
           {
@@ -59,6 +75,11 @@ export async function POST(request: NextRequest) {
           },
         ],
       },
+    });
+
+    // Clean up: delete the uploaded file
+    await ai.files.delete({ name: uploadedFile.name! }).catch(() => {
+      // Ignore deletion errors
     });
 
     const text = response.text || 'No transcription generated.';
