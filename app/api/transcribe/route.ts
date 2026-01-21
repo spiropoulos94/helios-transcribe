@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDefaultProvider, TranscriptionInput, TranscriptionConfig } from '@/lib/ai';
 import { extractAudioFromYouTube } from '@/lib/youtube';
 import { readFile } from 'fs/promises';
+import { featureFlags } from '@/lib/config';
 
 // Default configuration for Greek transcription
 const DEFAULT_CONFIG: TranscriptionConfig = {
@@ -31,6 +32,14 @@ export async function POST(request: NextRequest) {
 
       if (!youtubeUrl) {
         return NextResponse.json({ error: 'No YouTube URL provided' }, { status: 400 });
+      }
+
+      // Check if YouTube feature is disabled
+      if (featureFlags.disableYouTube) {
+        return NextResponse.json(
+          { error: 'YouTube transcription is currently unavailable. This feature is coming soon!' },
+          { status: 501 }
+        );
       }
 
       // Extract audio from YouTube

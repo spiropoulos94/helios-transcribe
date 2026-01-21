@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, Youtube, FileAudio, AlertCircle } from 'lucide-react';
 import { UploadConfig } from '../types';
+import { featureFlags } from '@/lib/config';
 
 interface InputSectionProps {
   onStartProcessing: (config: UploadConfig) => void;
@@ -12,6 +13,7 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
   const [url, setUrl] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isYoutubeDisabled = featureFlags.disableYouTube;
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -67,14 +69,24 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
           </button>
           <button
             onClick={() => setActiveTab('url')}
-            className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
-              activeTab === 'url' 
-                ? 'bg-white text-red-600 border-b-2 border-red-600' 
-                : 'bg-slate-50 text-slate-500 hover:text-slate-700'
+            disabled={isYoutubeDisabled}
+            className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors relative ${
+              isYoutubeDisabled ? 'cursor-not-allowed' : ''
+            } ${
+              activeTab === 'url'
+                ? 'bg-white text-red-600 border-b-2 border-red-600'
+                : isYoutubeDisabled
+                  ? 'bg-slate-50 text-slate-400 opacity-60'
+                  : 'bg-slate-50 text-slate-500 hover:text-slate-700'
             }`}
           >
             <Youtube className="w-4 h-4" />
             YouTube URL
+            {isYoutubeDisabled && (
+              <span className="absolute top-1 right-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                Coming Soon
+              </span>
+            )}
           </button>
         </div>
 
@@ -129,26 +141,39 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
                 <input
                   type="url"
                   placeholder="https://www.youtube.com/watch?v=..."
-                  className="block w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                  className="block w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all disabled:bg-slate-50 disabled:cursor-not-allowed"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  disabled={isProcessing}
+                  disabled={isYoutubeDisabled || isProcessing}
                 />
               </div>
-              
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-green-800 leading-relaxed">
-                  Enter a YouTube URL to transcribe the video's audio directly into Greek text.
-                </p>
-              </div>
+
+              {isYoutubeDisabled ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800 leading-relaxed">
+                    YouTube transcription is coming soon! This feature will allow you to transcribe videos directly into Greek text.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-green-800 leading-relaxed">
+                    Enter a YouTube URL to transcribe the video's audio directly into Greek text.
+                  </p>
+                </div>
+              )}
 
               <button
                 type="submit"
-                disabled={isProcessing || !url}
-                className="w-full py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 focus:ring-4 focus:ring-red-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-600/20"
+                disabled={isYoutubeDisabled || isProcessing || !url}
+                className={`w-full py-3 font-medium rounded-xl shadow-lg transition-all ${
+                  isYoutubeDisabled
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    : 'bg-red-600 text-white hover:bg-red-700 focus:ring-4 focus:ring-red-100 disabled:opacity-50 disabled:cursor-not-allowed shadow-red-600/20'
+                }`}
               >
-                {isProcessing ? 'Analyzing...' : 'Generate Greek Transcript'}
+                {isYoutubeDisabled ? 'Coming Soon' : isProcessing ? 'Analyzing...' : 'Generate Greek Transcript'}
               </button>
             </form>
           )}

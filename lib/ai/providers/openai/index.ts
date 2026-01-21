@@ -7,6 +7,7 @@ import {
   ProviderCapabilities,
 } from '../../types';
 import { buildTranscriptionPrompt } from '../../prompts';
+import { aiConfig } from '../../../config';
 
 export interface OpenAIProviderConfig {
   apiKey?: string;
@@ -38,7 +39,7 @@ export class OpenAIProvider implements AITranscriptionProvider {
 
   constructor(config?: OpenAIProviderConfig) {
     this.config = {
-      apiKey: config?.apiKey || process.env.OPENAI_API_KEY || '',
+      apiKey: config?.apiKey || aiConfig.OPENAI_API_KEY || '',
       whisperModel: config?.whisperModel || 'whisper-1',
       gptModel: config?.gptModel || 'gpt-4o',
     };

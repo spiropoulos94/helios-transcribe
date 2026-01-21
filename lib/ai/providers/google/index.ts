@@ -7,6 +7,7 @@ import {
   ProviderCapabilities,
 } from '../../types';
 import { buildTranscriptionPrompt } from '../../prompts';
+import { aiConfig } from '../../../config';
 
 export interface GoogleProviderConfig {
   apiKey?: string;
@@ -43,7 +44,7 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
 
   constructor(config?: GoogleProviderConfig) {
     this.config = {
-      apiKey: config?.apiKey || process.env.GEMINI_API_KEY || '',
+      apiKey: config?.apiKey || aiConfig.GEMINI_API_KEY || '',
       model: config?.model || process.env.GEMINI_MODEL || 'gemini-2.0-flash',
       pollingIntervalMs: config?.pollingIntervalMs || 2000,
     };

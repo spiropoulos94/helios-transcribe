@@ -1,6 +1,7 @@
 import { AITranscriptionProvider } from './types';
 import { GoogleGeminiProvider } from './providers/google';
 import { OpenAIProvider } from './providers/openai';
+import { aiConfig } from '../config';
 
 export type ProviderType = 'google-gemini' | 'openai';
 
@@ -27,7 +28,7 @@ export function getProvider(type: ProviderType): AITranscriptionProvider {
  * Priority: checks env var AI_PROVIDER, then falls back based on available API keys
  */
 export function getDefaultProvider(): AITranscriptionProvider {
-  const envProvider = process.env.AI_PROVIDER as ProviderType | undefined;
+  const envProvider = aiConfig.provider;
 
   if (envProvider && providerRegistry[envProvider]) {
     const provider = getProvider(envProvider);
