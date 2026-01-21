@@ -69,8 +69,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
-
+    <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col items-center">
 
         {/* Intro Text */}
@@ -143,20 +142,6 @@ export default function Home() {
         )}
 
       </main>
-
-      <footer className="py-8 text-center text-slate-400 text-sm">
-        <p>Made with ❤️ by{' '}
-          <a
-            href="https://www.linkedin.com/in/nikos-spiropoulos-813167181/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:text-blue-600 transition-colors"
-          >
-            Nikos
-          </a>
-        </p>
-        <p className="mt-1">&copy; {new Date().getFullYear()} Helios Transcribe. Built with Gemini AI.</p>
-      </footer>
     </div>
   );
 }

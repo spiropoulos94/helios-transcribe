@@ -50,11 +50,7 @@ export const Header: React.FC = () => {
           })}
         </nav>
 
-        {/* Badge - Right */}
-        <div className="hidden md:flex items-center gap-2 text-sm text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 flex-shrink-0">
-          <Sparkles className="w-4 h-4 text-amber-500" />
-          <span>Powered by Gemini 2.5 Flash</span>
-        </div>
+        
       </div>
     </header>
   );

@@ -93,7 +93,7 @@ export default function TranscriptionDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex items-center justify-center">
+      <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex items-center justify-center">
         <div className="text-slate-600">Loading transcription...</div>
       </div>
     );
@@ -101,7 +101,7 @@ export default function TranscriptionDetailPage() {
 
   if (!transcription) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
+      <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
         <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col items-center justify-center">
           <div className="text-center animate-in fade-in slide-in-from-bottom-4">
             <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -125,7 +125,7 @@ export default function TranscriptionDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
+    <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
         {/* Back Button */}
@@ -224,20 +224,6 @@ export default function TranscriptionDetailPage() {
         </div>
 
       </main>
-
-      <footer className="py-8 text-center text-slate-400 text-sm">
-        <p>Made with ❤️ by{' '}
-          <a
-            href="https://www.linkedin.com/in/nikos-spiropoulos-813167181/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:text-blue-600 transition-colors"
-          >
-            Nikos
-          </a>
-        </p>
-        <p className="mt-1">&copy; {new Date().getFullYear()} Helios Transcribe. Built with Gemini AI.</p>
-      </footer>
     </div>
   );
 }
