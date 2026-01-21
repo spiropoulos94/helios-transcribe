@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Header } from '@/components/Header';
+import { useState } from 'react';
+import Link from 'next/link';
 import { InputSection } from '@/components/InputSection';
 import { TranscriptView } from '@/components/TranscriptView';
-import { TranscriptionHistory } from '@/components/TranscriptionHistory';
 import { AppStatus, TranscriptionResult, UploadConfig } from '@/types';
 import { saveTranscription } from '@/lib/storage';
 import { Loader2, AlertTriangle } from 'lucide-react';
@@ -14,7 +13,6 @@ export default function Home() {
   const [result, setResult] = useState<TranscriptionResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [currentFileName, setCurrentFileName] = useState<string>('');
-  const [historyKey, setHistoryKey] = useState(0);
 
   const handleStartProcessing = async (config: UploadConfig) => {
     setErrorMsg(null);
@@ -54,9 +52,6 @@ export default function Home() {
           data.metadata?.model?.includes('gemini') ? 'google-gemini' : data.metadata?.model?.includes('whisper') ? 'openai' : undefined,
           data.metadata
         );
-
-        // Trigger history refresh
-        setHistoryKey((prev) => prev + 1);
       } catch (err: unknown) {
         console.error(err);
         const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
@@ -75,7 +70,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
-      <Header />
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col items-center">
 
@@ -130,18 +124,22 @@ export default function Home() {
         {status === AppStatus.COMPLETED && result && (
           <div className="w-full flex flex-col items-center">
             <TranscriptView result={result} />
-            <button
-              onClick={resetApp}
-              className="mt-8 text-slate-500 hover:text-slate-800 font-medium text-sm border-b border-transparent hover:border-slate-300 transition-all"
-            >
-              Transcribe another file
-            </button>
+            <div className="mt-8 flex items-center gap-4">
+              <button
+                onClick={resetApp}
+                className="text-slate-500 hover:text-slate-800 font-medium text-sm border-b border-transparent hover:border-slate-300 transition-all"
+              >
+                Transcribe another file
+              </button>
+              <span className="text-slate-300">•</span>
+              <Link
+                href="/library"
+                className="text-blue-600 hover:text-blue-700 font-medium text-sm border-b border-transparent hover:border-blue-300 transition-all"
+              >
+                View all transcriptions
+              </Link>
+            </div>
           </div>
-        )}
-
-        {/* Transcription History */}
-        {status === AppStatus.IDLE && (
-          <TranscriptionHistory key={historyKey} />
         )}
 
       </main>

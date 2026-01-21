@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { FileText, Download, Trash2, ChevronDown, ChevronUp, Copy, CheckCircle2 } from 'lucide-react';
+import Link from 'next/link';
+import { FileText, Download, Trash2, ChevronDown, ChevronUp, Copy, CheckCircle2, ArrowRight } from 'lucide-react';
 import { SavedTranscription } from '@/lib/storage';
 
 interface TranscriptionCardProps {
@@ -11,13 +12,17 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
+  const handleCopy = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     navigator.clipboard.writeText(transcription.text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownload = () => {
+  const handleDownload = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     const blob = new Blob([transcription.text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -27,6 +32,20 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this transcription?')) {
+      onDelete(transcription.id);
+    }
+  };
+
+  const handleExpandToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsExpanded(!isExpanded);
   };
 
   const formatDate = (timestamp: number) => {
@@ -71,16 +90,20 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm hover:shadow-md border border-slate-200 transition-all duration-200">
-      {/* Card Header */}
+    <Link
+      href={`/library/${transcription.id}`}
+      className="block group"
+    >
+      <div className="bg-white rounded-xl shadow-sm hover:shadow-md border border-slate-200 transition-all duration-200 group-hover:border-blue-300">
+        {/* Card Header */}
       <div className="p-4 border-b border-slate-100">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 flex-1 min-w-0">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition-colors">
               <FileText className="w-5 h-5 text-blue-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-slate-900 truncate">{transcription.fileName}</h3>
+              <h3 className="font-semibold text-slate-900 truncate group-hover:text-blue-600 transition-colors">{transcription.fileName}</h3>
               <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
                 <span>{formatDate(transcription.timestamp)}</span>
                 {transcription.metadata?.wordCount && (
@@ -114,7 +137,7 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
               <Download className="w-4 h-4" />
             </button>
             <button
-              onClick={() => onDelete(transcription.id)}
+              onClick={handleDeleteClick}
               className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               title="Delete"
             >
@@ -135,21 +158,27 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
             getPreview(transcription.text)
           )}
         </div>
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="mt-3 text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
-        >
-          {isExpanded ? (
-            <>
-              Show less <ChevronUp className="w-3 h-3" />
-            </>
-          ) : (
-            <>
-              Show more <ChevronDown className="w-3 h-3" />
-            </>
-          )}
-        </button>
+        <div className="flex items-center justify-between mt-3">
+          <button
+            onClick={handleExpandToggle}
+            className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
+          >
+            {isExpanded ? (
+              <>
+                Show less <ChevronUp className="w-3 h-3" />
+              </>
+            ) : (
+              <>
+                Show more <ChevronDown className="w-3 h-3" />
+              </>
+            )}
+          </button>
+          <div className="text-xs font-medium text-blue-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            View details <ArrowRight className="w-3 h-3" />
+          </div>
+        </div>
       </div>
     </div>
+    </Link>
   );
 };

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { Header } from '@/components/Header';
 import './globals.css';
 
 const inter = Inter({
@@ -20,6 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.className}>
       <body className="bg-slate-50 text-slate-900 antialiased">
+        <Header />
         {children}
       </body>
     </html>
