@@ -99,7 +99,7 @@ export default function Home() {
             </div>
             <h3 className="mt-8 text-xl font-semibold text-slate-900">Transcribing Media...</h3>
             <p className="text-slate-500 mt-2 max-w-md text-center">
-              Gemini AI is listening to your audio and translating it to Greek. This may take a moment depending on file size.
+              AI is listening to your audio and translating it to Greek. This may take a moment depending on file size.
             </p>
           </div>
         )}

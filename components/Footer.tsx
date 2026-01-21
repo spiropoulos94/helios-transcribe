@@ -15,7 +15,7 @@ export const Footer: React.FC = () => {
         </a>
       </p>
       <p className="mt-1">
-        &copy; {new Date().getFullYear()} Helios Transcribe. Built with Gemini AI.
+        &copy; {new Date().getFullYear()} Helios Transcribe.
       </p>
     </footer>
   );
