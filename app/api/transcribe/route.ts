@@ -3,6 +3,7 @@ import { getDefaultProvider, TranscriptionInput, TranscriptionConfig } from '@/l
 import { extractAudioFromYouTube } from '@/lib/youtube';
 import { readFile } from 'fs/promises';
 import { featureFlags } from '@/lib/config';
+import { getAudioDuration, shouldUseChunking, processWithChunking } from '@/lib/audio';
 
 // Default configuration for Greek transcription
 const DEFAULT_CONFIG: TranscriptionConfig = {
@@ -87,8 +88,25 @@ export async function POST(request: NextRequest) {
       durationSeconds,
     };
 
-    // Perform transcription
-    const result = await provider.transcribe(input, config);
+    // Detect duration if not already available (for file uploads)
+    let duration = durationSeconds;
+    if (!duration) {
+      try {
+        duration = await getAudioDuration(input);
+      } catch (error) {
+        console.warn('[Transcription] Failed to detect duration, proceeding without chunking:', error);
+      }
+    }
+
+    // Decide whether to use chunking
+    let result;
+    if (duration && shouldUseChunking(duration)) {
+      console.log(`[Transcription] File duration ${Math.floor(duration / 60)} minutes - using chunking`);
+      result = await processWithChunking(input, config, provider);
+    } else {
+      console.log(`[Transcription] Processing without chunking`);
+      result = await provider.transcribe(input, config);
+    }
 
     return NextResponse.json({
       text: result.text,

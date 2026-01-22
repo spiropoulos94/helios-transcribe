@@ -30,6 +30,10 @@ export interface TranscriptionResult {
     processingTimeMs?: number;
     finishReason?: string; // AI model's finish reason (e.g., 'STOP', 'MAX_TOKENS', 'RECITATION')
     wasTruncated?: boolean; // Flag indicating if output was truncated
+    chunked?: boolean; // Flag indicating if audio was processed using chunking
+    chunkCount?: number; // Number of chunks processed (if chunked)
+    chunkDurationSeconds?: number; // Duration of each chunk in seconds (if chunked)
+    overlapSeconds?: number; // Overlap duration between chunks in seconds (if chunked)
   };
 }
 
