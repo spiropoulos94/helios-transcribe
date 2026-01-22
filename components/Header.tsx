@@ -22,7 +22,7 @@ export const Header: React.FC = () => {
             <Languages className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Helios Transcribe</h1>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">GrechoAI</h1>
             <p className="text-xs text-slate-500 font-medium">AI-Powered Greek Transcription</p>
           </div>
         </Link>

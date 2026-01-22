@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Helios Transcribe - YouTube to Greek',
+  title: 'GrechoAI - YouTube to Greek',
   description: 'AI-Powered Greek Transcription using Gemini 2.5 Flash',
 };
 

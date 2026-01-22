@@ -219,7 +219,7 @@ export default function TranscriptionDetailPage() {
             <div className="flex items-center gap-2">
               <FileText className="w-3 h-3" />
             </div>
-            <span>Helios Transcribe</span>
+            <span>GrechoAI</span>
           </div>
         </div>
 

@@ -15,7 +15,7 @@ export const Footer: React.FC = () => {
         </a>
       </p>
       <p className="mt-1">
-        &copy; {new Date().getFullYear()} Helios Transcribe.
+        &copy; {new Date().getFullYear()} GrechoAI.
       </p>
     </footer>
   );

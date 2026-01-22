@@ -1,4 +1,4 @@
-# Helios Transcribe
+# GrechoAI
 
 AI-powered Greek transcription app built with Next.js 16, TypeScript, and Google Gemini 2.5 Flash. Upload audio/video files and get accurate Greek transcriptions with speaker identification.
 
@@ -33,7 +33,7 @@ AI-powered Greek transcription app built with Next.js 16, TypeScript, and Google
 1. Clone the repository:
    ```bash
    git clone <your-repo-url>
-   cd helios-transcribe
+   cd grechoai
    ```
 
 2. Install dependencies:
@@ -74,7 +74,7 @@ AI-powered Greek transcription app built with Next.js 16, TypeScript, and Google
 ## Project Structure
 
 ```
-helios-transcribe/
+grechoai/
 ├── app/
 │   ├── api/
 │   │   └── transcribe/      # Transcription API endpoint
