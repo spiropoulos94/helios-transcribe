@@ -70,7 +70,7 @@ export async function extractAudioFromYouTube(
 
     // Download audio using yt-dlp with reliable options that avoid 403 errors
     const downloadCommand = `${YT_DLP_PATH} -x --audio-format mp3 --audio-quality 0 --force-ipv4 --no-check-certificate --retries infinite --fragment-retries infinite --socket-timeout 30 -o "${filePath.replace('.mp3', '.%(ext)s')}" --no-warnings "${url}"`;
-    await execAsync(downloadCommand, { maxBuffer: 50 * 1024 * 1024 }); // 50MB buffer
+    await execAsync(downloadCommand, { maxBuffer: 1024 * 1024 * 1024 }); // 1GB buffer
 
     // Create cleanup function
     const cleanup = async () => {

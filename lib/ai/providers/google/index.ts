@@ -13,6 +13,7 @@ export interface GoogleProviderConfig {
   apiKey?: string;
   model?: string;
   pollingIntervalMs?: number;
+  requestTimeoutMs?: number;
 }
 
 export class GoogleGeminiProvider implements AITranscriptionProvider {
@@ -47,6 +48,7 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
       apiKey: config?.apiKey || aiConfig.GEMINI_API_KEY || '',
       model: config?.model || process.env.GEMINI_MODEL || 'gemini-2.0-flash',
       pollingIntervalMs: config?.pollingIntervalMs || 2000,
+      requestTimeoutMs: config?.requestTimeoutMs || 300000, // 5 minutes default
     };
 
     if (this.config.apiKey) {
@@ -86,8 +88,57 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
 
     const startTime = Date.now();
 
+    try {
+      return await this.performTranscription(input, config, startTime);
+    } catch (error) {
+      // Enhanced error handling with model-specific guidance
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      // Check for preview/experimental model issues
+      if (this.config.model.includes('preview') || this.config.model.includes('exp')) {
+        throw new Error(
+          `Transcription failed with ${this.config.model}: ${errorMessage}. ` +
+          `Preview models may have limited availability or API compatibility issues. ` +
+          `Try using a stable model like 'gemini-2.0-flash' or 'gemini-2.5-flash' instead.`
+        );
+      }
+
+      // Check for timeout issues
+      if (errorMessage.includes('timed out')) {
+        throw new Error(
+          `Request timed out after ${this.config.requestTimeoutMs}ms: ${errorMessage}. ` +
+          `This may indicate the file is too large, the model is overloaded, or network issues. ` +
+          `Try a smaller file or a faster model like 'gemini-2.0-flash'.`
+        );
+      }
+
+      // Check for network/fetch errors
+      if (errorMessage.includes('fetch failed') || errorMessage.includes('network')) {
+        throw new Error(
+          `Network error occurred: ${errorMessage}. ` +
+          `Please check your internet connection and verify the model '${this.config.model}' is available. ` +
+          `Stable models include: gemini-2.0-flash, gemini-2.5-flash, gemini-2.5-pro.`
+        );
+      }
+
+      // Re-throw with context
+      throw new Error(`Transcription failed with ${this.config.model}: ${errorMessage}`);
+    }
+  }
+
+  private async performTranscription(
+    input: TranscriptionInput,
+    config: TranscriptionConfig,
+    startTime: number
+  ): Promise<TranscriptionResult> {
+    if (!this.client) {
+      throw new Error('Client is not initialized');
+    }
+
+    const client = this.client;
+
     // Upload file to Google File API
-    const uploadedFile = await this.client.files.upload({
+    const uploadedFile = await client.files.upload({
       file: new Blob([input.buffer], { type: input.mimeType }),
       config: {
         mimeType: input.mimeType,
@@ -96,10 +147,10 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
     });
 
     // Wait for file to be processed
-    let fileMetadata = await this.client.files.get({ name: uploadedFile.name! });
+    let fileMetadata = await client.files.get({ name: uploadedFile.name! });
     while (fileMetadata.state === FileState.PROCESSING) {
       await this.delay(this.config.pollingIntervalMs);
-      fileMetadata = await this.client.files.get({ name: uploadedFile.name! });
+      fileMetadata = await client.files.get({ name: uploadedFile.name! });
     }
 
     if (fileMetadata.state === FileState.FAILED) {
@@ -115,21 +166,51 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
       customInstructions: config.customInstructions,
     });
 
-    const response = await this.client.models.generateContent({
-      model: this.config.model,
-      contents: createUserContent([
-        createPartFromUri(fileMetadata.uri!, fileMetadata.mimeType!),
-        prompt,
-      ]),
-    });
+    // Determine appropriate token limit based on model
+    // Gemini 2.0 Flash: 8,192 tokens max
+    // Gemini 2.5 Flash: 65,536 tokens max
+    // Gemini 3.0 Pro: Use conservative 32,768 for preview models
+    const maxOutputTokens = this.config.model.includes('gemini-3')
+      ? 32768 // Conservative limit for preview models
+      : this.config.model.includes('2.5')
+        ? 65536
+        : 8192;
+
+    // Generate content with timeout protection
+    const response = await this.generateContentWithTimeout(
+      {
+        model: this.config.model,
+        contents: createUserContent([
+          createPartFromUri(fileMetadata.uri!, fileMetadata.mimeType!),
+          prompt,
+        ]),
+        config: {
+          maxOutputTokens,
+        },
+      },
+      this.config.requestTimeoutMs
+    );
 
     // Clean up: delete the uploaded file
-    await this.client.files.delete({ name: uploadedFile.name! }).catch(() => {
+    await client.files.delete({ name: uploadedFile.name! }).catch(() => {
       // Ignore deletion errors
     });
 
     const text = response.text || '';
     const processingTimeMs = Date.now() - startTime;
+
+    // Check for potential truncation
+    const finishReason = response.candidates?.[0]?.finishReason;
+    const wasTruncated = finishReason === 'MAX_TOKENS' || finishReason === 'RECITATION';
+
+    // Log warning if truncated (visible in server logs)
+    if (wasTruncated) {
+      console.warn(
+        `[Google Gemini] Response may be incomplete. Finish reason: ${finishReason}. ` +
+        `Model: ${this.config.model}, Duration: ${config.durationSeconds}s, ` +
+        `Output length: ${text.length} chars. Consider upgrading model or splitting audio.`
+      );
+    }
 
     return {
       text,
@@ -138,11 +219,42 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
         wordCount: text.split(/\s+/).filter(Boolean).length,
         model: this.config.model,
         processingTimeMs,
+        finishReason, // Include finish reason for debugging
+        wasTruncated, // Flag to indicate potential incomplete transcription
       },
     };
   }
 
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Generate content with timeout protection
+   * Wraps the API call with a timeout to prevent indefinite hanging
+   */
+  private async generateContentWithTimeout(
+    params: {
+      model: string;
+      contents: ReturnType<typeof createUserContent>;
+      config?: { maxOutputTokens?: number };
+    },
+    timeoutMs: number
+  ) {
+    if (!this.client) {
+      throw new Error('Client is not initialized');
+    }
+
+    const client = this.client;
+
+    return Promise.race([
+      client.models.generateContent(params),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Request timed out after ${timeoutMs}ms. The model may be unavailable or the file may be too large.`)),
+          timeoutMs
+        )
+      ),
+    ]);
   }
 }

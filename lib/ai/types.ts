@@ -28,6 +28,8 @@ export interface TranscriptionResult {
     duration?: string;
     model?: string;
     processingTimeMs?: number;
+    finishReason?: string; // AI model's finish reason (e.g., 'STOP', 'MAX_TOKENS', 'RECITATION')
+    wasTruncated?: boolean; // Flag indicating if output was truncated
   };
 }
 
