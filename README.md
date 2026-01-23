@@ -11,6 +11,7 @@ AI-powered Greek transcription app built with Next.js 16, TypeScript, and Google
 - 💾 **Local Storage** - All transcriptions saved locally in your browser
 - 📱 **Responsive Design** - Beautiful UI that works on desktop, tablet, and mobile
 - ⚡ **Fast & Efficient** - Powered by Google Gemini 2.5 Flash for quick results
+- 🚀 **Parallel Processing** - Process long audio files faster with concurrent chunk processing
 
 ## Tech Stack
 
@@ -117,11 +118,66 @@ OPENAI_API_KEY=your_openai_key  # Optional fallback
 
 ### Default Transcription Settings
 
-Located in `app/api/transcribe/route.ts`:
+Located in [app/api/transcribe/route.ts](app/api/transcribe/route.ts):
 
 - **Target Language**: Greek (`el`)
 - **Speaker Diarization**: Enabled
-- **Max Speakers**: 5
+- **Timestamps**: Enabled
+
+### Audio Processing for Long Files
+
+For audio files longer than 10 minutes, the app can automatically use intelligent chunking when enabled:
+
+- **Smart Chunk Sizing**: Automatically calculates optimal chunk size (5-30 minutes) based on file duration
+- **Overlap**: 10 seconds between chunks for better accuracy
+- **Parallel Processing**: Up to 3 chunks processed concurrently
+
+You can configure chunking in `.env.local`:
+
+```env
+# Enable automatic chunking for long files (default: true)
+ENABLE_CHUNKING=true
+
+# Max concurrent chunks (default: 3)
+# 0 or 1 = sequential (slowest, safest)
+# 2-5 = limited parallel (balanced)
+# 6-10 = aggressive parallel (faster, riskier)
+# -1 = UNLIMITED (MAXIMUM SPEED - process all chunks at once!)
+MAX_CONCURRENT_CHUNKS=3
+```
+
+**How Smart Chunk Sizing Works:**
+
+The app automatically determines the best chunk size based on your file duration:
+
+| File Duration | Chunk Size |
+|--------------|------------|
+| < 15 minutes | 5 minutes |
+| 15-60 minutes | 10 minutes |
+| 1-2 hours | 15 minutes |
+| 2-3 hours | 20 minutes |
+| 3+ hours | 30 minutes |
+
+**Performance Modes:**
+
+| Mode | Setting | Speed | API Usage | Best For |
+|------|---------|-------|-----------|----------|
+| Sequential | `0` or `1` | Slowest | Minimal | Strict rate limits |
+| Balanced | `3` (default) | 3x faster | Moderate | Most use cases |
+| Aggressive | `6-10` | 6-10x faster | High | Generous rate limits |
+| **MAXIMUM** | `-1` | **FASTEST** | **Very High** | **No rate limits** |
+
+**Example:** A 90-minute audio file = 9 chunks of 10 minutes each
+- Sequential (`1`): ~90 minutes total
+- Balanced (`3`): ~30 minutes total (3x speedup)
+- **Maximum (`-1`)**: ~10 minutes total (9x speedup - all chunks processed simultaneously)
+
+**Benefits of parallel processing:**
+- ⚡ **Dramatically faster transcription** - Up to N× speedup where N = number of chunks
+- 🎯 **Configurable concurrency** - Control based on your API rate limits
+- 🧠 **Smart chunk sizing** - Automatically adapts to file length
+- 🔄 **Automatic deduplication** - Overlapping regions are intelligently merged
+- 🛡️ **Error resilience** - Failed chunks don't break the entire transcription
 
 ## Deployment
 

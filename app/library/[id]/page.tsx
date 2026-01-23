@@ -13,7 +13,8 @@ import {
   Calendar,
   FileAudio,
   Hash,
-  AlertTriangle
+  AlertTriangle,
+  Clock
 } from 'lucide-react';
 import { SavedTranscription, getTranscriptionById, deleteTranscription } from '@/lib/storage';
 
@@ -74,6 +75,27 @@ export default function TranscriptionDetailPage() {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const formatProcessingTime = (ms?: number) => {
+    if (!ms) return null;
+    const seconds = Math.floor(ms / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds}s`;
+  };
+
+  const formatAudioDuration = (seconds?: number) => {
+    if (!seconds) return null;
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
   const renderFormattedText = (text: string) => {
@@ -156,10 +178,22 @@ export default function TranscriptionDetailPage() {
                       <Calendar className="w-4 h-4" />
                       <span>{formatDate(transcription.timestamp)}</span>
                     </div>
+                    {transcription.metadata?.audioDurationSeconds && (
+                      <div className="flex items-center gap-2">
+                        <FileAudio className="w-4 h-4 text-blue-600" />
+                        <span className="text-blue-600 font-medium">{formatAudioDuration(transcription.metadata.audioDurationSeconds)}</span>
+                      </div>
+                    )}
                     {transcription.metadata?.wordCount && (
                       <div className="flex items-center gap-2">
                         <Hash className="w-4 h-4" />
                         <span>{transcription.metadata.wordCount} words</span>
+                      </div>
+                    )}
+                    {transcription.metadata?.processingTimeMs && (
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-green-600" />
+                        <span className="text-green-600 font-medium">⚡ {formatProcessingTime(transcription.metadata.processingTimeMs)}</span>
                       </div>
                     )}
                     {transcription.provider && (

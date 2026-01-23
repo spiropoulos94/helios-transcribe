@@ -12,6 +12,7 @@ export interface SavedTranscription {
     duration?: string;
     model?: string;
     processingTimeMs?: number;
+    audioDurationSeconds?: number;
   };
 }
 

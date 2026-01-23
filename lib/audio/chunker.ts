@@ -9,16 +9,53 @@ import type { ChunkSpec, AudioChunk } from './ffmpeg';
 import { getAudioDuration, splitAudioIntoChunks, cleanupChunks } from './ffmpeg';
 import { adjustTimestamps, deduplicateAndStitch, type ChunkResult } from './deduplication';
 import { audioConfig } from '../config';
+import { formatDuration } from '../utils/format';
 
 /**
- * Determines if audio chunking should be used based on duration
+ * Determines if audio chunking should be used based on configuration and duration
  * @param durationSeconds - Audio duration in seconds
  * @returns True if chunking should be used
  */
 export function shouldUseChunking(durationSeconds: number): boolean {
-  const thresholdSeconds = audioConfig.chunkingThresholdMinutes * 60;
-  // Add 30 second buffer to avoid chunking files exactly at threshold
-  return durationSeconds >= thresholdSeconds + 30;
+  if (!audioConfig.enableChunking) {
+    return false;
+  }
+  // Use chunking for files longer than 10 minutes
+  const thresholdSeconds = 10 * 60;
+  return durationSeconds >= thresholdSeconds;
+}
+
+/**
+ * Calculates optimal chunk duration based on total file duration
+ * Returns a value between 5-30 minutes that divides the file reasonably
+ * @param durationSeconds - Total audio duration in seconds
+ * @returns Optimal chunk duration in minutes
+ */
+export function calculateOptimalChunkDuration(durationSeconds: number): number {
+  const durationMinutes = durationSeconds / 60;
+
+  // For files under 15 minutes, use 5-minute chunks
+  if (durationMinutes < 15) {
+    return 5;
+  }
+
+  // For files 15-60 minutes, use 10-minute chunks
+  if (durationMinutes < 60) {
+    return 10;
+  }
+
+  // For files 60-120 minutes, use 15-minute chunks
+  if (durationMinutes < 120) {
+    return 15;
+  }
+
+  // For files 120-180 minutes, use 20-minute chunks
+  if (durationMinutes < 180) {
+    return 20;
+  }
+
+  // For very long files (3+ hours), use 30-minute chunks
+  return 30;
 }
 
 /**
@@ -27,8 +64,9 @@ export function shouldUseChunking(durationSeconds: number): boolean {
  * @returns Array of chunk specifications
  */
 export function calculateChunks(durationSeconds: number): ChunkSpec[] {
-  const chunkDurationSeconds = audioConfig.chunkDurationMinutes * 60;
-  const overlapSeconds = audioConfig.overlapSeconds;
+  const chunkDurationMinutes = calculateOptimalChunkDuration(durationSeconds);
+  const chunkDurationSeconds = chunkDurationMinutes * 60;
+  const overlapSeconds = 10; // Fixed 10-second overlap
 
   const chunks: ChunkSpec[] = [];
   let currentStart = 0;
@@ -93,27 +131,23 @@ export async function processWithChunking(
     console.log(`[Audio Chunking] Duration: ${formatDuration(duration)}`);
 
     // 2. Calculate chunk boundaries
+    const chunkDurationMinutes = calculateOptimalChunkDuration(duration);
     const chunkSpecs = calculateChunks(duration);
     console.log(
       `[Audio Chunking] Creating ${chunkSpecs.length} chunks ` +
-      `(${audioConfig.chunkDurationMinutes} min each, ${audioConfig.overlapSeconds}s overlap)`
+      `(${chunkDurationMinutes} min each, 10s overlap)`
     );
 
     // 3. Split audio into chunk files
     audioChunks = await splitAudioIntoChunks(input, chunkSpecs);
 
-    // 4. Process each chunk sequentially
-    const chunkResults: ChunkResult[] = [];
-
-    for (const chunk of audioChunks) {
-      console.log(
-        `[Audio Chunking] Processing chunk ${chunk.index + 1}/${chunk.total}: ` +
-        `${formatDuration(chunk.startTime)} - ${formatDuration(chunk.endTime)}`
-      );
-
-      const chunkResult = await processChunk(chunk, provider, config);
-      chunkResults.push(chunkResult);
-    }
+    // 4. Process chunks (parallel or sequential based on config)
+    const chunkResults = await processChunksWithConcurrency(
+      audioChunks,
+      provider,
+      config,
+      audioConfig.maxConcurrentChunks
+    );
 
     // 5. Adjust timestamps in each chunk
     console.log(`[Audio Chunking] Adjusting timestamps`);
@@ -147,8 +181,8 @@ export async function processWithChunking(
         processingTimeMs,
         chunked: true,
         chunkCount: audioChunks.length,
-        chunkDurationSeconds: audioConfig.chunkDurationMinutes * 60,
-        overlapSeconds: audioConfig.overlapSeconds,
+        chunkDurationSeconds: chunkDurationMinutes * 60,
+        overlapSeconds: 10,
         wasTruncated: anyTruncated,
         finishReason: anyTruncated ? 'MAX_TOKENS' : 'STOP',
       },
@@ -159,6 +193,100 @@ export async function processWithChunking(
       await cleanupChunks(audioChunks);
     }
   }
+}
+
+/**
+ * Processes multiple chunks with controlled concurrency
+ * @param chunks - Array of audio chunks to process
+ * @param provider - AI transcription provider
+ * @param config - Transcription configuration
+ * @param maxConcurrent - Maximum number of chunks to process in parallel (0 = sequential, -1 = unlimited)
+ * @returns Array of chunk results in original order
+ */
+async function processChunksWithConcurrency(
+  chunks: AudioChunk[],
+  provider: AITranscriptionProvider,
+  config: TranscriptionConfig,
+  maxConcurrent: number
+): Promise<ChunkResult[]> {
+  // If maxConcurrent is 0 or 1, process sequentially
+  if (maxConcurrent === 0 || maxConcurrent === 1) {
+    console.log(`[Audio Chunking] Processing chunks sequentially`);
+    const results: ChunkResult[] = [];
+    for (const chunk of chunks) {
+      console.log(
+        `[Audio Chunking] Processing chunk ${chunk.index + 1}/${chunk.total}: ` +
+        `${formatDuration(chunk.startTime)} - ${formatDuration(chunk.endTime)}`
+      );
+      const result = await processChunk(chunk, provider, config);
+      results.push(result);
+    }
+    return results;
+  }
+
+  // Unlimited concurrency - process all at once (MAXIMUM SPEED)
+  if (maxConcurrent < 0) {
+    console.log(`[Audio Chunking] Processing ALL ${chunks.length} chunks in parallel (unlimited concurrency)`);
+    return Promise.all(
+      chunks.map(async (chunk) => {
+        console.log(
+          `[Audio Chunking] Starting chunk ${chunk.index + 1}/${chunk.total}: ` +
+          `${formatDuration(chunk.startTime)} - ${formatDuration(chunk.endTime)}`
+        );
+        const result = await processChunk(chunk, provider, config);
+        console.log(
+          `[Audio Chunking] ✓ Completed chunk ${chunk.index + 1}/${chunk.total}`
+        );
+        return result;
+      })
+    );
+  }
+
+  // Optimized parallel processing with concurrency limit
+  console.log(`[Audio Chunking] Processing chunks with max concurrency: ${maxConcurrent}`);
+
+  const results: ChunkResult[] = new Array(chunks.length);
+  let activeCount = 0;
+  let chunkIndex = 0;
+
+  return new Promise((resolve, reject) => {
+    const startNext = () => {
+      // Start as many chunks as we can without exceeding the limit
+      while (activeCount < maxConcurrent && chunkIndex < chunks.length) {
+        const currentIndex = chunkIndex++;
+        const chunk = chunks[currentIndex];
+        activeCount++;
+
+        console.log(
+          `[Audio Chunking] Starting chunk ${chunk.index + 1}/${chunk.total} [${activeCount}/${maxConcurrent} active]: ` +
+          `${formatDuration(chunk.startTime)} - ${formatDuration(chunk.endTime)}`
+        );
+
+        processChunk(chunk, provider, config)
+          .then(result => {
+            results[currentIndex] = result;
+            console.log(
+              `[Audio Chunking] ✓ Completed chunk ${chunk.index + 1}/${chunk.total} [${activeCount - 1}/${maxConcurrent} remaining active]`
+            );
+          })
+          .catch(error => {
+            reject(error);
+          })
+          .finally(() => {
+            activeCount--;
+            // Check if we're done
+            if (chunkIndex >= chunks.length && activeCount === 0) {
+              resolve(results);
+            } else {
+              // Start the next chunk
+              startNext();
+            }
+          });
+      }
+    };
+
+    startNext();
+  });
 }
 
 /**
@@ -205,18 +333,3 @@ async function processChunk(
   }
 }
 
-/**
- * Formats duration in seconds to human-readable format
- * @param seconds - Duration in seconds
- * @returns Formatted string (HH:MM:SS or MM:SS)
- */
-function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-  return `${minutes}:${secs.toString().padStart(2, '0')}`;
-}

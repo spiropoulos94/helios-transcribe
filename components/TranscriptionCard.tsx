@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { FileText, Download, Trash2, ChevronDown, ChevronUp, Copy, CheckCircle2, ArrowRight } from 'lucide-react';
 import { SavedTranscription } from '@/lib/storage';
+import { formatDuration, formatProcessingTime } from '@/lib/utils/format';
 
 interface TranscriptionCardProps {
   transcription: SavedTranscription;
@@ -73,6 +74,7 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
     return text.slice(0, maxLength) + '...';
   };
 
+
   // Helper function to format speaker labels with bold text
   const renderFormattedText = (text: string) => {
     const parts = text.split(/(Ομιλητής \d+:|Speaker \d+:)/g);
@@ -106,10 +108,22 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
               <h3 className="font-semibold text-slate-900 truncate group-hover:text-blue-600 transition-colors">{transcription.fileName}</h3>
               <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
                 <span>{formatDate(transcription.timestamp)}</span>
+                {transcription.metadata?.audioDurationSeconds && (
+                  <>
+                    <span>•</span>
+                    <span className="text-blue-600 font-medium">🎵 {formatDuration(transcription.metadata.audioDurationSeconds)}</span>
+                  </>
+                )}
                 {transcription.metadata?.wordCount && (
                   <>
                     <span>•</span>
                     <span>{transcription.metadata.wordCount} words</span>
+                  </>
+                )}
+                {transcription.metadata?.processingTimeMs && (
+                  <>
+                    <span>•</span>
+                    <span className="text-green-600 font-medium">⚡ {formatProcessingTime(transcription.metadata.processingTimeMs)}</span>
                   </>
                 )}
                 {transcription.provider && (

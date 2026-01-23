@@ -111,7 +111,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       text: result.text,
       fileName: input.fileName,
-      metadata: result.metadata,
+      metadata: {
+        ...result.metadata,
+        audioDurationSeconds: duration,
+      },
     });
   } catch (error: unknown) {
     console.error('Transcription Error:', error);
