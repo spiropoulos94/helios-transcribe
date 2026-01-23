@@ -15,7 +15,7 @@ export const Header: React.FC = () => {
   ];
 
   return (
-    <header className="w-full py-6 px-4 sm:px-8 border-b border-slate-200 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+    <header className="w-full py-3 px-4 sm:px-8 border-b border-slate-200 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
         {/* Branding - Left */}
         <Link href="/" className="flex items-center gap-3 flex-shrink-0 hover:opacity-90 transition-opacity">
