@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+/* Custom blue color theme */
+@theme {
+  --color-blue-50: #e8f1fc;
+  --color-blue-100: #c4daf7;
+  --color-blue-200: #9dc1f2;
+  --color-blue-300: #75a8ed;
+  --color-blue-400: #4e8fe8;
+  --color-blue-500: #2676e3;
+  --color-blue-600: #12519c;
+  --color-blue-700: #0e407d;
+  --color-blue-800: #0a2f5e;
+  --color-blue-900: #061e3f;
+}
+
 /* Custom scrollbar for transcript view */
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;

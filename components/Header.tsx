@@ -3,7 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Sparkles, Languages, Home, Library } from 'lucide-react';
+import { Home, Library } from 'lucide-react';
+import Logo from './Logo';
 
 export const Header: React.FC = () => {
   const pathname = usePathname();
@@ -17,14 +18,8 @@ export const Header: React.FC = () => {
     <header className="w-full py-6 px-4 sm:px-8 border-b border-slate-200 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
         {/* Branding - Left */}
-        <Link href="/" className="flex items-center gap-3 flex-shrink-0">
-          <div className="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-600/20">
-            <Languages className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">GrechoAI</h1>
-            <p className="text-xs text-slate-500 font-medium">AI-Powered Greek Transcription</p>
-          </div>
+        <Link href="/" className="flex items-center gap-3 flex-shrink-0 hover:opacity-90 transition-opacity">
+          <Logo width={125} />
         </Link>
 
         {/* Navigation - Center */}
