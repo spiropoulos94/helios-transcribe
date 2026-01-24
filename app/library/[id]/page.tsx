@@ -17,6 +17,7 @@ import {
   Clock
 } from 'lucide-react';
 import { SavedTranscription, getTranscriptionById, deleteTranscription } from '@/lib/storage';
+import { calculateTranscriptionCost } from '@/lib/pricing/calculator';
 
 export default function TranscriptionDetailPage() {
   const router = useRouter();
@@ -160,10 +161,10 @@ export default function TranscriptionDetailPage() {
         </Link>
 
         {/* Main Content Card */}
-        <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+        <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-visible animate-in fade-in slide-in-from-bottom-4">
 
           {/* Header */}
-          <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+          <div className="sticky top-0 z-10 px-6 py-5 border-b border-slate-100 bg-white/95 backdrop-blur-sm rounded-t-2xl">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-4 flex-1 min-w-0">
                 <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-600/20">
@@ -196,10 +197,14 @@ export default function TranscriptionDetailPage() {
                         <span className="text-green-600 font-medium">⚡ {formatProcessingTime(transcription.metadata.processingTimeMs)}</span>
                       </div>
                     )}
-                    {transcription.provider && (
+                    {transcription.metadata?.audioDurationSeconds && transcription.metadata?.pricing && (
                       <div className="flex items-center gap-2">
-                        <FileAudio className="w-4 h-4" />
-                        <span className="capitalize">{transcription.provider}</span>
+                        <span className="text-emerald-600 font-semibold">💰 ${calculateTranscriptionCost(transcription.metadata.audioDurationSeconds, transcription.metadata.pricing)}</span>
+                      </div>
+                    )}
+                    {transcription.metadata?.model && (
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">{transcription.metadata.model}</span>
                       </div>
                     )}
                   </div>

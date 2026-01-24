@@ -13,6 +13,14 @@ export interface SavedTranscription {
     model?: string;
     processingTimeMs?: number;
     audioDurationSeconds?: number;
+    uploadGroupId?: string;
+    error?: string;
+    pricing?: {
+      model10min: string;
+      model30min: string;
+      model1hr: string;
+      bestFor: string;
+    };
   };
 }
 
@@ -97,6 +105,57 @@ export function clearAllTranscriptions(): void {
   } catch (error) {
     console.error('Error clearing transcriptions from localStorage:', error);
   }
+}
+
+/**
+ * Save multiple transcriptions from multi-model processing
+ * Links them together with a shared uploadGroupId
+ */
+export function saveMultiModelTranscriptions(
+  results: Array<{
+    model: string;
+    text: string;
+    fileName: string;
+    metadata: any;
+    provider: string;
+    success: boolean;
+  }>
+): SavedTranscription[] {
+  const uploadGroupId = generateId();
+  const timestamp = Date.now();
+  const savedTranscriptions: SavedTranscription[] = [];
+
+  // Get existing transcriptions
+  const transcriptions = getSavedTranscriptions();
+
+  // Create transcription for each result
+  for (const result of results) {
+    const transcription: SavedTranscription = {
+      id: generateId(),
+      text: result.text,
+      fileName: result.fileName,
+      timestamp,
+      provider: result.provider,
+      metadata: {
+        ...result.metadata,
+        uploadGroupId,
+      },
+    };
+
+    savedTranscriptions.push(transcription);
+    transcriptions.unshift(transcription);
+  }
+
+  // Keep only last 50 transcriptions
+  const trimmed = transcriptions.slice(0, 50);
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+  } catch (error) {
+    console.error('Error saving transcriptions to localStorage:', error);
+  }
+
+  return savedTranscriptions;
 }
 
 /**

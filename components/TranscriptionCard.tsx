@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { FileText, Download, Trash2, ChevronDown, ChevronUp, Copy, CheckCircle2, ArrowRight } from 'lucide-react';
 import { SavedTranscription } from '@/lib/storage';
 import { formatDuration, formatProcessingTime } from '@/lib/utils/format';
+import { calculateTranscriptionCost } from '@/lib/pricing/calculator';
 
 interface TranscriptionCardProps {
   transcription: SavedTranscription;
@@ -74,7 +75,6 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
     return text.slice(0, maxLength) + '...';
   };
 
-
   // Helper function to format speaker labels with bold text
   const renderFormattedText = (text: string) => {
     const parts = text.split(/(Ομιλητής \d+:|Speaker \d+:)/g);
@@ -99,40 +99,17 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
       <div className="bg-white rounded-xl shadow-sm hover:shadow-md border border-slate-200 transition-all duration-200 group-hover:border-blue-300">
         {/* Card Header */}
       <div className="p-4 border-b border-slate-100">
-        <div className="flex items-start justify-between gap-3">
+        {/* Header: Title and Actions */}
+        <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-start gap-3 flex-1 min-w-0">
             <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition-colors">
               <FileText className="w-5 h-5 text-blue-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-slate-900 truncate group-hover:text-blue-600 transition-colors">{transcription.fileName}</h3>
-              <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
-                <span>{formatDate(transcription.timestamp)}</span>
-                {transcription.metadata?.audioDurationSeconds && (
-                  <>
-                    <span>•</span>
-                    <span className="text-blue-600 font-medium">🎵 {formatDuration(transcription.metadata.audioDurationSeconds)}</span>
-                  </>
-                )}
-                {transcription.metadata?.wordCount && (
-                  <>
-                    <span>•</span>
-                    <span>{transcription.metadata.wordCount} words</span>
-                  </>
-                )}
-                {transcription.metadata?.processingTimeMs && (
-                  <>
-                    <span>•</span>
-                    <span className="text-green-600 font-medium">⚡ {formatProcessingTime(transcription.metadata.processingTimeMs)}</span>
-                  </>
-                )}
-                {transcription.provider && (
-                  <>
-                    <span>•</span>
-                    <span className="capitalize">{transcription.provider}</span>
-                  </>
-                )}
-              </div>
+              <h3 className="font-semibold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
+                {transcription.fileName}
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">{formatDate(transcription.timestamp)}</p>
             </div>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
@@ -159,6 +136,47 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
             </button>
           </div>
         </div>
+
+        {/* Metadata Badges */}
+        <div className="flex flex-wrap gap-2">
+          {transcription.metadata?.model && (
+            <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">
+              {transcription.metadata.model}
+            </span>
+          )}
+          {transcription.metadata?.audioDurationSeconds && (
+            <span className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-700 text-xs">
+              🎵 {formatDuration(transcription.metadata.audioDurationSeconds)}
+            </span>
+          )}
+          {transcription.metadata?.wordCount && (
+            <span className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-700 text-xs">
+              {transcription.metadata.wordCount} words
+            </span>
+          )}
+          {transcription.metadata?.processingTimeMs && (
+            <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-50 text-green-700 text-xs">
+              ⚡ {formatProcessingTime(transcription.metadata.processingTimeMs)}
+            </span>
+          )}
+          {transcription.metadata?.audioDurationSeconds && transcription.metadata?.pricing && (
+            <>
+              <span className="inline-flex items-center px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                💰 ${calculateTranscriptionCost(transcription.metadata.audioDurationSeconds, transcription.metadata.pricing)}
+              </span>
+              <span className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-xs">
+                {transcription.metadata.pricing.model1hr}/hr
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* Error Message */}
+        {transcription.metadata?.error && (
+          <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+            Error: {transcription.metadata.error}
+          </div>
+        )}
       </div>
 
       {/* Card Content */}

@@ -5,12 +5,12 @@ import Link from 'next/link';
 import { InputSection } from '@/components/InputSection';
 import { TranscriptView } from '@/components/TranscriptView';
 import { AppStatus, TranscriptionResult, UploadConfig } from '@/types';
-import { saveTranscription } from '@/lib/storage';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { saveMultiModelTranscriptions } from '@/lib/storage';
+import { Loader2, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 
 export default function Home() {
   const [status, setStatus] = useState<AppStatus>(AppStatus.IDLE);
-  const [result, setResult] = useState<TranscriptionResult | null>(null);
+  const [results, setResults] = useState<TranscriptionResult[] | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [currentFileName, setCurrentFileName] = useState<string>('');
 
@@ -35,16 +35,11 @@ export default function Home() {
           throw new Error(data.error || 'Failed to process YouTube video');
         }
 
-        setResult(data);
+        setResults(data.results);
         setStatus(AppStatus.COMPLETED);
 
-        // Save to localStorage with video title as fileName
-        saveTranscription(
-          data.text,
-          data.fileName || config.youtubeUrl,
-          data.metadata?.model?.includes('gemini') ? 'google-gemini' : data.metadata?.model?.includes('whisper') ? 'openai' : undefined,
-          data.metadata
-        );
+        // Save all transcriptions with multi-model support
+        saveMultiModelTranscriptions(data.results);
       } catch (err: unknown) {
         console.error('YouTube Processing Error:', err);
         const message = err instanceof Error ? err.message : 'Failed to process YouTube video. Please try again.';
@@ -74,16 +69,11 @@ export default function Home() {
           throw new Error(data.error || 'An unexpected error occurred.');
         }
 
-        setResult(data);
+        setResults(data.results);
         setStatus(AppStatus.COMPLETED);
 
-        // Save to localStorage
-        saveTranscription(
-          data.text,
-          config.file.name,
-          data.metadata?.model?.includes('gemini') ? 'google-gemini' : data.metadata?.model?.includes('whisper') ? 'openai' : undefined,
-          data.metadata
-        );
+        // Save all transcriptions with multi-model support
+        saveMultiModelTranscriptions(data.results);
       } catch (err: unknown) {
         console.error(err);
         const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
@@ -95,7 +85,7 @@ export default function Home() {
 
   const resetApp = () => {
     setStatus(AppStatus.IDLE);
-    setResult(null);
+    setResults(null);
     setErrorMsg(null);
     setCurrentFileName('');
   };
@@ -152,9 +142,75 @@ export default function Home() {
           </div>
         )}
 
-        {status === AppStatus.COMPLETED && result && (
-          <div className="w-full flex flex-col items-center">
-            <TranscriptView result={result} />
+        {status === AppStatus.COMPLETED && results && (
+          <div className="w-full flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="w-full max-w-4xl space-y-6">
+              <h2 className="text-2xl font-bold text-slate-900 mb-6">
+                Transcription Complete - {results.filter(r => r.success).length} of {results.length} models succeeded
+              </h2>
+
+              {results.map((result, index) => (
+                <div
+                  key={index}
+                  className={`p-6 rounded-xl shadow-lg border-2 transition-all ${
+                    result.success
+                      ? 'bg-white border-green-200 hover:border-green-300'
+                      : 'bg-red-50 border-red-200'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-xl font-semibold text-slate-900">
+                          {result.model}
+                        </h3>
+                        {result.success ? (
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <XCircle className="w-5 h-5 text-red-600" />
+                        )}
+                      </div>
+                      {result.metadata?.pricing && (
+                        <div className="text-sm text-slate-600">
+                          <p className="font-medium">
+                            <span className="text-purple-600">{result.metadata.pricing.model10min}</span> per 10 min • <span className="text-purple-600">{result.metadata.pricing.model30min}</span> per 30 min • <span className="text-purple-600">{result.metadata.pricing.model1hr}</span> per 1 hr
+                          </p>
+                          <p className="text-blue-600 font-medium mt-1">
+                            {result.metadata.pricing.bestFor}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {result.success ? (
+                    <div className="mt-4">
+                      <div className="text-sm text-slate-700 whitespace-pre-wrap bg-slate-50 rounded-lg p-4 max-h-96 overflow-y-auto border border-slate-200">
+                        {result.text.length > 500 ? `${result.text.substring(0, 500)}...` : result.text}
+                      </div>
+                      {result.metadata?.wordCount && (
+                        <p className="mt-3 text-xs text-slate-500">
+                          {result.metadata.wordCount} words
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mt-4 p-4 bg-red-100 rounded-lg border border-red-300">
+                      <p className="text-red-700 font-medium text-sm">
+                        Error: {result.metadata?.error || 'Unknown error occurred'}
+                      </p>
+                    </div>
+                  )}
+
+                  {result.metadata?.processingTimeMs && (
+                    <p className="mt-4 text-xs text-slate-500">
+                      Processed in {(result.metadata.processingTimeMs / 1000).toFixed(2)}s
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+
             <div className="mt-8 flex items-center gap-4">
               <button
                 onClick={resetApp}
