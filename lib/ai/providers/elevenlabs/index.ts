@@ -4,6 +4,8 @@ import type {
   TranscriptionConfig,
   TranscriptionResult,
   ProviderCapabilities,
+  StructuredTranscription,
+  TranscriptionSegment,
 } from '../../types';
 
 export interface ElevenLabsProviderConfig {
@@ -130,10 +132,21 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
 
       // Extract text
       let text = result.text || '';
+      let structuredData: StructuredTranscription | undefined;
+      let rawJson: string | undefined;
 
-      // If timestamps are enabled, format with speaker labels
-      if (config.enableSpeakerIdentification && result.words && result.words.length > 0) {
-        text = this.formatWithSpeakers(result.words);
+      // If word-level data is available, create structured output
+      if (result.words && result.words.length > 0) {
+        // Convert word-level data to structured format
+        structuredData = this.convertWordsToStructuredOutput(result.words);
+        rawJson = JSON.stringify(result);
+
+        // Generate plain text from structured data (if speaker identification enabled)
+        if (config.enableSpeakerIdentification) {
+          text = structuredData.segments
+            .map(seg => `[${seg.timestamp}] ${seg.speaker}: ${seg.content}`)
+            .join('\n\n');
+        }
       }
 
       const processingTimeMs = Date.now() - startTime;
@@ -143,6 +156,8 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
       return {
         text,
         provider: `elevenlabs-${this.model}`,
+        structuredData,
+        rawJson,
         metadata: {
           model: this.model,
           processingTimeMs,
@@ -158,37 +173,70 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
   }
 
   /**
-   * Format transcription with speaker labels from word-level data
+   * Convert seconds to MM:SS or HH:MM:SS timestamp format
    */
-  private formatWithSpeakers(words: any[]): string {
+  private formatTimestamp(seconds: number): string {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  /**
+   * Convert word-level data to structured transcription format
+   */
+  private convertWordsToStructuredOutput(words: any[]): StructuredTranscription {
+    const segments: TranscriptionSegment[] = [];
     let currentSpeaker: number | null = null;
-    let result = '';
-    let currentSegment = '';
+    let currentSegment: { words: string[]; startTime: number } = { words: [], startTime: 0 };
 
     for (const word of words) {
       const speakerId = word.speaker_id ?? null;
+      const startTime = word.start ?? 0;
 
-      // New speaker detected
+      // New speaker detected or first word
       if (speakerId !== currentSpeaker && speakerId !== null) {
-        // Flush current segment
-        if (currentSegment.trim()) {
-          result += currentSegment.trim() + '\n\n';
+        // Flush current segment if it has content
+        if (currentSegment.words.length > 0 && currentSpeaker !== null) {
+          segments.push({
+            speaker: `Speaker ${currentSpeaker + 1}`,
+            timestamp: this.formatTimestamp(currentSegment.startTime),
+            content: currentSegment.words.join(' '),
+            language: 'Greek',
+            language_code: 'el',
+            emotion: 'neutral',
+          });
         }
 
-        // Start new segment with speaker label
+        // Start new segment
         currentSpeaker = speakerId;
-        currentSegment = `[Speaker ${speakerId + 1}]: ${word.text} `;
+        currentSegment = { words: [word.text], startTime };
       } else {
         // Same speaker, add word
-        currentSegment += word.text + ' ';
+        currentSegment.words.push(word.text);
       }
     }
 
     // Flush final segment
-    if (currentSegment.trim()) {
-      result += currentSegment.trim();
+    if (currentSegment.words.length > 0 && currentSpeaker !== null) {
+      segments.push({
+        speaker: `Speaker ${currentSpeaker + 1}`,
+        timestamp: this.formatTimestamp(currentSegment.startTime),
+        content: currentSegment.words.join(' '),
+        language: 'Greek',
+        language_code: 'el',
+        emotion: 'neutral',
+      });
     }
 
-    return result;
+    return {
+      summary: `Transcription from ElevenLabs with ${segments.length} speaker segment${segments.length !== 1 ? 's' : ''}`,
+      segments,
+    };
   }
+
 }

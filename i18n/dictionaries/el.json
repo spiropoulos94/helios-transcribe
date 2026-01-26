@@ -142,7 +142,9 @@
     "download": "Download",
     "copy": "Αντιγραφή",
     "audioDuration": "Διάρκεια Ήχου",
-    "transcriptionCost": "Εκτιμώμενο Κόστος"
+    "transcriptionCost": "Εκτιμώμενο Κόστος",
+    "previous": "Προηγούμενο",
+    "next": "Επόμενο"
   },
   "inputSection": {
     "uploadFile": "Ανέβασμα Αρχείου",

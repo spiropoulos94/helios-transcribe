@@ -142,7 +142,9 @@
     "download": "Download",
     "copy": "Copy to clipboard",
     "audioDuration": "Audio Duration",
-    "transcriptionCost": "Estimated Cost"
+    "transcriptionCost": "Estimated Cost",
+    "previous": "Previous",
+    "next": "Next"
   },
   "inputSection": {
     "uploadFile": "Upload File",

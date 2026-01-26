@@ -14,9 +14,11 @@ import {
   FileAudio,
   Hash,
   AlertTriangle,
-  Clock
+  Clock,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
-import { SavedTranscription, getTranscriptionById, deleteTranscription } from '@/lib/storage';
+import { SavedTranscription, getTranscriptionById, deleteTranscription, getSavedTranscriptions } from '@/lib/storage';
 import { calculateTranscriptionCost } from '@/lib/pricing/calculator';
 import { type Locale } from '@/i18n/config';
 
@@ -33,12 +35,30 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [previousId, setPreviousId] = useState<string | null>(null);
+  const [nextId, setNextId] = useState<string | null>(null);
+
+  console.log(transcription);
 
   useEffect(() => {
     if (id) {
       const data = getTranscriptionById(id);
       setTranscription(data);
       setIsLoading(false);
+
+      // Get all transcriptions to find prev/next
+      const allTranscriptions = getSavedTranscriptions();
+      const currentIndex = allTranscriptions.findIndex((t) => t.id === id);
+
+      if (currentIndex !== -1) {
+        // Previous item (newer) is at currentIndex - 1
+        setPreviousId(currentIndex > 0 ? allTranscriptions[currentIndex - 1].id : null);
+        // Next item (older) is at currentIndex + 1
+        setNextId(currentIndex < allTranscriptions.length - 1 ? allTranscriptions[currentIndex + 1].id : null);
+      } else {
+        setPreviousId(null);
+        setNextId(null);
+      }
     }
   }, [id]);
 
@@ -157,14 +177,55 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
     <div className="flex-1 bg-linear-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
-        {/* Back Button */}
-        <Link
-          href={`/${lang}/library`}
-          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 mb-6 transition-colors animate-in fade-in slide-in-from-bottom-4"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          {t.backToLibrary}
-        </Link>
+        {/* Navigation Bar */}
+        <div className="flex items-center justify-between mb-6 animate-in fade-in slide-in-from-bottom-4">
+          <Link
+            href={`/${lang}/library`}
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            {t.backToLibrary}
+          </Link>
+
+          {/* Next/Prev Navigation */}
+          <div className="flex items-center gap-2">
+            {previousId ? (
+              <Link
+                href={`/${lang}/library/${previousId}`}
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">{t.previous}</span>
+              </Link>
+            ) : (
+              <button
+                disabled
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-300 cursor-not-allowed rounded-lg"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">{t.previous}</span>
+              </button>
+            )}
+
+            {nextId ? (
+              <Link
+                href={`/${lang}/library/${nextId}`}
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <span className="hidden sm:inline">{t.next}</span>
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            ) : (
+              <button
+                disabled
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-300 cursor-not-allowed rounded-lg"
+              >
+                <span className="hidden sm:inline">{t.next}</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Main Content Card */}
         <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-visible animate-in fade-in slide-in-from-bottom-4">

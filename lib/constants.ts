@@ -1,16 +1,16 @@
 // Models to process for multi-model transcription
 export const MODELS_TO_PROCESS = [
-  // {
-  //   providerType: 'elevenlabs' as const,
-  //   modelName: 'scribe_v2',
-  //   displayName: 'ElevenLabs Scribe v2',
-  //   pricing: {
-  //     model10min: '$0.10',
-  //     model30min: '$0.30',
-  //     model1hr: '$0.59',
-  //     bestFor: 'Best Greek accuracy - Correct proper nouns',
-  //   },
-  // },
+  {
+    providerType: 'elevenlabs' as const,
+    modelName: 'scribe_v2',
+    displayName: 'ElevenLabs Scribe v2',
+    pricing: {
+      model10min: '$0.10',
+      model30min: '$0.30',
+      model1hr: '$0.59',
+      bestFor: 'Best Greek accuracy - Correct proper nouns',
+    },
+  },
   // {
   //   providerType: 'google-gemini' as const,
   //   modelName: 'gemini-2.5-flash',
