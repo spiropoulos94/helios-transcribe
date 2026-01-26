@@ -29,6 +29,8 @@ export default function TranscriptionDetailPage() {
   const [copied, setCopied] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  console.log(transcription);
+
   useEffect(() => {
     if (id) {
       const data = getTranscriptionById(id);

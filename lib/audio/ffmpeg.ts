@@ -4,6 +4,7 @@ import { writeFile, unlink } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import type { TranscriptionInput } from '../ai/types';
+import { sanitizeFileName } from './utils';
 
 const execAsync = promisify(exec);
 
@@ -28,7 +29,8 @@ export interface AudioChunk extends ChunkSpec {
  * @throws Error if ffprobe fails or is not installed
  */
 export async function getAudioDuration(input: TranscriptionInput): Promise<number> {
-  const tempFilePath = join(tmpdir(), `temp_probe_${Date.now()}_${input.fileName}`);
+  const sanitizedFileName = sanitizeFileName(input.fileName, input.mimeType);
+  const tempFilePath = join(tmpdir(), `temp_probe_${Date.now()}_${sanitizedFileName}`);
 
   try {
     // Write buffer to temp file for ffprobe
@@ -77,7 +79,8 @@ export async function splitAudioIntoChunks(
   input: TranscriptionInput,
   chunks: ChunkSpec[]
 ): Promise<AudioChunk[]> {
-  const sourceFilePath = join(tmpdir(), `temp_source_${Date.now()}_${input.fileName}`);
+  const sanitizedFileName = sanitizeFileName(input.fileName, input.mimeType);
+  const sourceFilePath = join(tmpdir(), `temp_source_${Date.now()}_${sanitizedFileName}`);
   const audioChunks: AudioChunk[] = [];
 
   try {
@@ -87,7 +90,7 @@ export async function splitAudioIntoChunks(
 
     // Create each chunk file
     for (const chunk of chunks) {
-      const chunkFileName = `chunk_${chunk.index}_${Date.now()}_${input.fileName}`;
+      const chunkFileName = `chunk_${chunk.index}_${Date.now()}_${sanitizedFileName}`;
       const chunkFilePath = join(tmpdir(), chunkFileName);
 
       // Build ffmpeg command

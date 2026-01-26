@@ -1,3 +1,5 @@
+import { StructuredTranscription } from './ai/types';
+
 /**
  * Saved transcription with metadata
  */
@@ -21,6 +23,10 @@ export interface SavedTranscription {
       model1hr: string;
       bestFor: string;
     };
+    /** Structured transcription data (when available from provider like Gemini) */
+    structuredData?: StructuredTranscription;
+    /** Raw JSON response from the provider (when structured output is used) */
+    rawJson?: string;
   };
 }
 

@@ -1,3 +1,5 @@
+import type { StructuredTranscription } from '../ai/types';
+
 export interface ChunkResult {
   text: string;
   startTime: number;
@@ -6,6 +8,8 @@ export interface ChunkResult {
   hasOverlapAfter: boolean;
   model?: string;
   wasTruncated?: boolean;
+  structuredData?: StructuredTranscription;
+  rawJson?: string;
 }
 
 /**
@@ -52,6 +56,65 @@ export function adjustTimestamps(text: string, offsetSeconds: number): string {
     }
     return `[${minutes}:${seconds.toString().padStart(2, '0')}]`;
   });
+}
+
+/**
+ * Adjusts timestamps in structured data segments by adding an offset
+ * @param structuredData - Structured transcription data
+ * @param offsetSeconds - Number of seconds to add to each timestamp
+ * @returns Structured data with adjusted timestamps
+ */
+export function adjustStructuredTimestamps(
+  structuredData: StructuredTranscription,
+  offsetSeconds: number
+): StructuredTranscription {
+  if (offsetSeconds === 0 || !structuredData.segments) {
+    return structuredData;
+  }
+
+  return {
+    ...structuredData,
+    segments: structuredData.segments.map(segment => ({
+      ...segment,
+      timestamp: adjustSingleTimestamp(segment.timestamp, offsetSeconds),
+    })),
+  };
+}
+
+/**
+ * Adjusts a single timestamp string by adding an offset
+ * @param timestamp - Timestamp string in MM:SS or HH:MM:SS format
+ * @param offsetSeconds - Number of seconds to add
+ * @returns Adjusted timestamp string
+ */
+function adjustSingleTimestamp(timestamp: string, offsetSeconds: number): string {
+  // Parse timestamp (without brackets)
+  const parts = timestamp.split(':');
+  let totalSeconds: number;
+
+  if (parts.length === 3) {
+    // HH:MM:SS format
+    totalSeconds = parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
+  } else if (parts.length === 2) {
+    // MM:SS format
+    totalSeconds = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  } else {
+    // Invalid format, return as-is
+    return timestamp;
+  }
+
+  // Add offset
+  totalSeconds += offsetSeconds;
+
+  // Format back
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
 /**

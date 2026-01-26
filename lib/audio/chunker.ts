@@ -7,7 +7,7 @@ import type {
 } from '../ai/types';
 import type { ChunkSpec, AudioChunk } from './ffmpeg';
 import { getAudioDuration, splitAudioIntoChunks, cleanupChunks } from './ffmpeg';
-import { adjustTimestamps, deduplicateAndStitch, type ChunkResult } from './deduplication';
+import { adjustTimestamps, adjustStructuredTimestamps, deduplicateAndStitch, type ChunkResult } from './deduplication';
 import { audioConfig } from '../config';
 import { formatDuration } from '../utils/format';
 
@@ -149,12 +149,34 @@ export async function processWithChunking(
       audioConfig.maxConcurrentChunks
     );
 
-    // 5. Adjust timestamps in each chunk
+    // 5. Adjust timestamps in each chunk (both text and structured data)
     console.log(`[Audio Chunking] Adjusting timestamps`);
-    const adjustedChunks = chunkResults.map(chunk => ({
-      ...chunk,
-      text: adjustTimestamps(chunk.text, Math.floor(chunk.startTime)),
-    }));
+    const adjustedChunks = chunkResults.map((chunk, index) => {
+      const offsetSeconds = Math.floor(chunk.startTime);
+      console.log(`[Audio Chunking] Chunk ${index + 1}: Adjusting timestamps by +${offsetSeconds}s (chunk starts at ${formatDuration(chunk.startTime)})`);
+
+      if (chunk.structuredData && chunk.structuredData.segments.length > 0) {
+        const firstSegment = chunk.structuredData.segments[0];
+        const lastSegment = chunk.structuredData.segments[chunk.structuredData.segments.length - 1];
+        console.log(`[Audio Chunking] Chunk ${index + 1} before adjustment: first timestamp ${firstSegment.timestamp}, last timestamp ${lastSegment.timestamp}`);
+      }
+
+      const adjusted = {
+        ...chunk,
+        text: adjustTimestamps(chunk.text, offsetSeconds),
+        structuredData: chunk.structuredData
+          ? adjustStructuredTimestamps(chunk.structuredData, offsetSeconds)
+          : undefined,
+      };
+
+      if (adjusted.structuredData && adjusted.structuredData.segments.length > 0) {
+        const firstSegment = adjusted.structuredData.segments[0];
+        const lastSegment = adjusted.structuredData.segments[adjusted.structuredData.segments.length - 1];
+        console.log(`[Audio Chunking] Chunk ${index + 1} after adjustment: first timestamp ${firstSegment.timestamp}, last timestamp ${lastSegment.timestamp}`);
+      }
+
+      return adjusted;
+    });
 
     // 6. Deduplicate and stitch results
     console.log(`[Audio Chunking] Deduplicating and stitching ${adjustedChunks.length} chunks`);
@@ -167,6 +189,30 @@ export async function processWithChunking(
     // Check if any chunk was truncated
     const anyTruncated = chunkResults.some(r => r.wasTruncated);
 
+    // Merge structured data from all chunks if available (now with adjusted timestamps)
+    const hasStructuredData = adjustedChunks.some(r => r.structuredData);
+    let mergedStructuredData: import('../ai/types').StructuredTranscription | undefined;
+    let mergedRawJson: string | undefined;
+
+    if (hasStructuredData) {
+      // Combine all segments from all chunks (timestamps already adjusted)
+      const allSegments = adjustedChunks
+        .filter(r => r.structuredData?.segments)
+        .flatMap(r => r.structuredData!.segments);
+
+      // Use the first chunk's summary or create a combined one
+      const firstSummary = adjustedChunks.find(r => r.structuredData?.summary)?.structuredData?.summary;
+
+      if (allSegments.length > 0) {
+        mergedStructuredData = {
+          summary: firstSummary || 'Multi-chunk transcription',
+          segments: allSegments,
+        };
+        mergedRawJson = JSON.stringify(mergedStructuredData, null, 2);
+        console.log(`[Audio Chunking] Merged ${allSegments.length} segments from ${adjustedChunks.length} chunks`);
+      }
+    }
+
     console.log(
       `[Audio Chunking] Complete! Total processing time: ${(processingTimeMs / 1000).toFixed(1)}s, ` +
       `Final word count: ${wordCount}`
@@ -175,6 +221,8 @@ export async function processWithChunking(
     return {
       text: finalText,
       provider: provider.name,
+      structuredData: mergedStructuredData,
+      rawJson: mergedRawJson,
       metadata: {
         wordCount,
         model: chunkResults[0]?.model,
@@ -323,6 +371,8 @@ async function processChunk(
       hasOverlapAfter: chunk.hasOverlapAfter,
       model: result.metadata?.model,
       wasTruncated: result.metadata?.wasTruncated,
+      structuredData: result.structuredData,
+      rawJson: result.rawJson,
     };
   } catch (error) {
     throw new Error(

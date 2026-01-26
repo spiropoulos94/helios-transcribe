@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Library } from 'lucide-react';
+import { Home, Library, Info } from 'lucide-react';
 import Logo from './Logo';
 
 export const Header: React.FC = () => {
@@ -11,7 +11,8 @@ export const Header: React.FC = () => {
 
   const navItems = [
     { href: '/', label: 'Transcribe', icon: Home },
-    { href: '/library', label: 'Library', icon: Library }
+    { href: '/library', label: 'Library', icon: Library },
+    { href: '/landing', label: 'About', icon: Info }
   ];
 
   return (

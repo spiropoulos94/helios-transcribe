@@ -1,10 +1,11 @@
-import { GoogleGenAI, FileState, createUserContent, createPartFromUri } from '@google/genai';
+import { GoogleGenAI, FileState, createUserContent, createPartFromUri, Type } from '@google/genai';
 import {
   AITranscriptionProvider,
   TranscriptionInput,
   TranscriptionConfig,
   TranscriptionResult,
   ProviderCapabilities,
+  StructuredTranscription,
 } from '../../types';
 import { buildTranscriptionPrompt } from '../../prompts';
 import { aiConfig } from '../../../config';
@@ -14,6 +15,7 @@ export interface GoogleProviderConfig {
   model?: string;
   pollingIntervalMs?: number;
   requestTimeoutMs?: number;
+  enableStructuredOutput?: boolean;
 }
 
 export class GoogleGeminiProvider implements AITranscriptionProvider {
@@ -49,6 +51,7 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
       model: config?.model || process.env.GEMINI_MODEL || 'gemini-2.0-flash',
       pollingIntervalMs: config?.pollingIntervalMs || 2000,
       requestTimeoutMs: config?.requestTimeoutMs || 300000, // 5 minutes default
+      enableStructuredOutput: config?.enableStructuredOutput ?? true, // Default: enabled
     };
 
     if (this.config.apiKey) {
@@ -157,7 +160,8 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
       throw new Error('File processing failed on Google servers');
     }
 
-    // Build prompt and generate content
+    // Build prompt
+    // Note: When structured output is enabled, the responseSchema will handle the output format
     const prompt = buildTranscriptionPrompt({
       targetLanguage: config.targetLanguage,
       enableSpeakerIdentification: config.enableSpeakerIdentification,
@@ -176,6 +180,22 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
         ? 65536
         : 8192;
 
+    // Build generation config
+    const generationConfig: any = {
+      maxOutputTokens,
+    };
+
+    // Add structured output configuration if enabled
+    if (this.config.enableStructuredOutput) {
+      generationConfig.responseMimeType = 'application/json';
+      generationConfig.responseSchema = this.getStructuredOutputSchema();
+      console.log('[Google Gemini] Structured output config:', {
+        model: this.config.model,
+        responseMimeType: generationConfig.responseMimeType,
+        hasSchema: !!generationConfig.responseSchema,
+      });
+    }
+
     // Generate content with timeout protection
     const response = await this.generateContentWithTimeout(
       {
@@ -184,9 +204,7 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
           createPartFromUri(fileMetadata.uri!, fileMetadata.mimeType!),
           prompt,
         ]),
-        config: {
-          maxOutputTokens,
-        },
+        config: generationConfig,
       },
       this.config.requestTimeoutMs
     );
@@ -212,6 +230,52 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
       );
     }
 
+    // Parse structured output if enabled
+    if (this.config.enableStructuredOutput && text) {
+      console.log('[Google Gemini] Structured output enabled, attempting to parse response...');
+      console.log('[Google Gemini] Response text preview:', text.substring(0, 500));
+
+      try {
+        const parsed = JSON.parse(text) as StructuredTranscription;
+        console.log('[Google Gemini] Successfully parsed JSON response');
+
+        // Validate that we have required fields
+        if (parsed.segments && Array.isArray(parsed.segments) && parsed.segments.length > 0) {
+          console.log(`[Google Gemini] Found ${parsed.segments.length} segments in structured output`);
+
+          // Generate plain text from segments for backward compatibility
+          const plainText = parsed.segments
+            .map(seg => {
+              const prefix = seg.timestamp ? `[${seg.timestamp}] ` : '';
+              return `${prefix}${seg.speaker}: ${seg.content}`;
+            })
+            .join('\n\n');
+
+          return {
+            text: plainText,
+            provider: this.name,
+            structuredData: parsed,
+            rawJson: text,
+            metadata: {
+              wordCount: plainText.split(/\s+/).filter(Boolean).length,
+              model: this.config.model,
+              processingTimeMs,
+              finishReason,
+              wasTruncated,
+            },
+          };
+        } else {
+          console.warn('[Google Gemini] Structured output missing valid segments, falling back to plain text');
+          console.log('[Google Gemini] Parsed object:', JSON.stringify(parsed, null, 2));
+        }
+      } catch (error) {
+        console.warn('[Google Gemini] Failed to parse structured output, falling back to plain text');
+        console.warn('[Google Gemini] Parse error:', error instanceof Error ? error.message : String(error));
+        // Fall through to plain text handling
+      }
+    }
+
+    // Standard plain text response (fallback or when structured output disabled)
     return {
       text,
       provider: this.name,
@@ -219,14 +283,70 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
         wordCount: text.split(/\s+/).filter(Boolean).length,
         model: this.config.model,
         processingTimeMs,
-        finishReason, // Include finish reason for debugging
-        wasTruncated, // Flag to indicate potential incomplete transcription
+        finishReason,
+        wasTruncated,
       },
     };
   }
 
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Get the JSON schema for structured output
+   * Defines the structure for speaker diarization, timestamps, and emotions
+   */
+  private getStructuredOutputSchema() {
+    return {
+      type: Type.OBJECT,
+      properties: {
+        summary: {
+          type: Type.STRING,
+          description: 'A concise summary of the audio content',
+        },
+        segments: {
+          type: Type.ARRAY,
+          description: 'List of transcribed segments with speaker and timestamp',
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              speaker: {
+                type: Type.STRING,
+                description: 'Speaker identifier (e.g., "Speaker 1", "Speaker 2")',
+              },
+              timestamp: {
+                type: Type.STRING,
+                description: 'Timestamp in MM:SS or HH:MM:SS format',
+              },
+              content: {
+                type: Type.STRING,
+                description: 'The transcribed/translated content for this segment',
+              },
+              language: {
+                type: Type.STRING,
+                description: 'Detected language name (e.g., "Greek", "English")',
+              },
+              language_code: {
+                type: Type.STRING,
+                description: 'ISO 639-1 language code (e.g., "el", "en")',
+              },
+              translation: {
+                type: Type.STRING,
+                description: 'Translation if different from content',
+              },
+              emotion: {
+                type: Type.STRING,
+                enum: ['happy', 'sad', 'angry', 'neutral'],
+                description: 'Detected emotion in this segment',
+              },
+            },
+            required: ['speaker', 'timestamp', 'content', 'language', 'language_code', 'emotion'],
+          },
+        },
+      },
+      required: ['summary', 'segments'],
+    };
   }
 
   /**

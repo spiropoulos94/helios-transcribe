@@ -1,4 +1,39 @@
 /**
+ * Emotion detected in speech segment
+ */
+export type EmotionType = 'happy' | 'sad' | 'angry' | 'neutral';
+
+/**
+ * A segment of transcribed content with metadata
+ */
+export interface TranscriptionSegment {
+  /** Speaker identifier (e.g., "Speaker 1", "Speaker 2") */
+  speaker: string;
+  /** Timestamp in MM:SS or HH:MM:SS format */
+  timestamp: string;
+  /** The transcribed/translated content for this segment */
+  content: string;
+  /** Detected language name (e.g., "Greek", "English") */
+  language?: string;
+  /** ISO language code (e.g., "el", "en") */
+  language_code?: string;
+  /** Translation if different from content */
+  translation?: string;
+  /** Detected emotion in this segment */
+  emotion?: EmotionType;
+}
+
+/**
+ * Structured transcription data with segments
+ */
+export interface StructuredTranscription {
+  /** Summary of the transcription */
+  summary: string;
+  /** Array of transcription segments with speaker, timestamp, content, emotion */
+  segments: TranscriptionSegment[];
+}
+
+/**
  * Configuration for transcription requests
  */
 export interface TranscriptionConfig {
@@ -35,6 +70,10 @@ export interface TranscriptionResult {
     chunkDurationSeconds?: number; // Duration of each chunk in seconds (if chunked)
     overlapSeconds?: number; // Overlap duration between chunks in seconds (if chunked)
   };
+  /** Structured transcription data (when available from provider like Gemini) */
+  structuredData?: StructuredTranscription;
+  /** Raw JSON response from the provider (when structured output is used) */
+  rawJson?: string;
 }
 
 /**

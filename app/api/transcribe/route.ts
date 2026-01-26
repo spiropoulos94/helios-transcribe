@@ -117,16 +117,19 @@ export async function POST(request: NextRequest) {
 
         // Get provider instance based on provider type
         let provider: AITranscriptionProvider;
-        if (modelConfig.providerType === 'elevenlabs') {
+        const providerType = modelConfig.providerType as string;
+
+        if (providerType === 'elevenlabs') {
           provider = new ElevenLabsProvider({
             model: modelConfig.modelName as 'scribe_v1' | 'scribe_v2'
           });
-        } else if (modelConfig.providerType === 'google-gemini') {
+        } else if (providerType === 'google-gemini') {
           provider = new GoogleGeminiProvider({
-            model: modelConfig.modelName
+            model: modelConfig.modelName,
+            enableStructuredOutput: true, // Enable structured JSON output with speakers, timestamps, emotions
           });
         } else {
-          throw new Error(`Unsupported provider type: ${modelConfig.providerType}`);
+          throw new Error(`Unsupported provider type: ${providerType}`);
         }
 
         // Validate input for this provider
@@ -153,6 +156,9 @@ export async function POST(request: NextRequest) {
             audioDurationSeconds: duration,
             processingTimeMs: Date.now() - modelStartTime,
             pricing: modelConfig.pricing,
+            // Pass through structured data if available (from Gemini)
+            structuredData: result.structuredData,
+            rawJson: result.rawJson,
           },
           provider: result.provider,
           success: true,
