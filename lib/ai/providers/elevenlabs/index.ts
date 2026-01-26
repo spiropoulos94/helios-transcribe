@@ -208,7 +208,6 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
             content: currentSegment.words.join(' '),
             language: 'Greek',
             language_code: 'el',
-            emotion: 'neutral',
           });
         }
 
@@ -229,7 +228,6 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
         content: currentSegment.words.join(' '),
         language: 'Greek',
         language_code: 'el',
-        emotion: 'neutral',
       });
     }
 

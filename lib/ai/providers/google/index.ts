@@ -305,47 +305,34 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
           type: Type.STRING,
           description: 'A concise summary of the audio content',
         },
+        total_speakers: {
+          type: Type.NUMBER,
+          description: 'Total number of distinct speakers identified in the audio',
+        },
         segments: {
           type: Type.ARRAY,
-          description: 'List of transcribed segments with speaker and timestamp',
+          description: 'List of transcribed segments with speaker and timestamp. Each segment represents a continuous speech by one speaker.',
           items: {
             type: Type.OBJECT,
             properties: {
               speaker: {
                 type: Type.STRING,
-                description: 'Speaker identifier (e.g., "Speaker 1", "Speaker 2")',
+                description: 'Speaker identifier (e.g., "Speaker 1", "Speaker 2", or "Ομιλητής 1"). Use consistent numbering throughout. If you can infer a name or role from context, include it as "Speaker 1 (name)".',
               },
               timestamp: {
                 type: Type.STRING,
-                description: 'Timestamp in MM:SS or HH:MM:SS format',
+                description: 'Timestamp in MM:SS or HH:MM:SS format indicating when this segment begins',
               },
               content: {
                 type: Type.STRING,
                 description: 'The transcribed/translated content for this segment',
               },
-              language: {
-                type: Type.STRING,
-                description: 'Detected language name (e.g., "Greek", "English")',
-              },
-              language_code: {
-                type: Type.STRING,
-                description: 'ISO 639-1 language code (e.g., "el", "en")',
-              },
-              translation: {
-                type: Type.STRING,
-                description: 'Translation if different from content',
-              },
-              emotion: {
-                type: Type.STRING,
-                enum: ['happy', 'sad', 'angry', 'neutral'],
-                description: 'Detected emotion in this segment',
-              },
             },
-            required: ['speaker', 'timestamp', 'content', 'language', 'language_code', 'emotion'],
+            required: ['speaker', 'timestamp', 'content'],
           },
         },
       },
-      required: ['summary', 'segments'],
+      required: ['summary', 'total_speakers', 'segments'],
     };
   }
 

@@ -1,9 +1,4 @@
 /**
- * Emotion detected in speech segment
- */
-export type EmotionType = 'happy' | 'sad' | 'angry' | 'neutral';
-
-/**
  * A segment of transcribed content with metadata
  */
 export interface TranscriptionSegment {
@@ -19,8 +14,8 @@ export interface TranscriptionSegment {
   language_code?: string;
   /** Translation if different from content */
   translation?: string;
-  /** Detected emotion in this segment */
-  emotion?: EmotionType;
+  /** Voice characteristics that distinguish this speaker (e.g., "deep male voice", "fast-paced speech") */
+  speaker_characteristics?: string;
 }
 
 /**
@@ -29,6 +24,8 @@ export interface TranscriptionSegment {
 export interface StructuredTranscription {
   /** Summary of the transcription */
   summary: string;
+  /** Total number of distinct speakers identified */
+  total_speakers?: number;
   /** Array of transcription segments with speaker, timestamp, content, emotion */
   segments: TranscriptionSegment[];
 }
