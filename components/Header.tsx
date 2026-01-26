@@ -5,21 +5,31 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Library, Info } from 'lucide-react';
 import Logo from './Logo';
+import { LanguageToggle } from './LanguageToggle';
+import { type Locale } from '@/i18n/config';
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  lang: Locale;
+  translations: any;
+}
+
+export const Header: React.FC<HeaderProps> = ({ lang, translations: t }) => {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/', label: 'Transcribe', icon: Home },
-    { href: '/library', label: 'Library', icon: Library },
-    { href: '/landing', label: 'About', icon: Info }
+    { href: `/${lang}`, label: t.transcribe, icon: Home },
+    { href: `/${lang}/library`, label: t.library, icon: Library },
+    { href: `/${lang}/landing`, label: t.about, icon: Info },
   ];
 
   return (
     <header className="w-full py-3 px-4 sm:px-8 border-b border-slate-200 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
         {/* Branding - Left */}
-        <Link href="/" className="flex items-center gap-3 flex-shrink-0 hover:opacity-90 transition-opacity">
+        <Link
+          href={`/${lang}`}
+          className="flex items-center gap-3 shrink-0 hover:opacity-90 transition-opacity"
+        >
           <Logo width={125} />
         </Link>
 
@@ -46,7 +56,8 @@ export const Header: React.FC = () => {
           })}
         </nav>
 
-        
+        {/* Language Toggle - Right */}
+        <LanguageToggle currentLang={lang} />
       </div>
     </header>
   );

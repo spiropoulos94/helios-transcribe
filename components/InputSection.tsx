@@ -6,9 +6,10 @@ import { featureFlags } from '@/lib/config';
 interface InputSectionProps {
   onStartProcessing: (config: UploadConfig) => void;
   isProcessing: boolean;
+  translations: any;
 }
 
-export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, isProcessing }) => {
+export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, isProcessing, translations: t }) => {
   const [activeTab, setActiveTab] = useState<'file' | 'url'>('file');
   const [url, setUrl] = useState('');
   const [dragActive, setDragActive] = useState(false);
@@ -53,19 +54,19 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
   return (
     <div className="w-full max-w-2xl mx-auto">
       <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100">
-        
+
         {/* Tabs */}
         <div className="flex border-b border-slate-100">
           <button
             onClick={() => setActiveTab('file')}
             className={`flex-1 py-4 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
-              activeTab === 'file' 
-                ? 'bg-white text-blue-600 border-b-2 border-blue-600' 
+              activeTab === 'file'
+                ? 'bg-white text-blue-600 border-b-2 border-blue-600'
                 : 'bg-slate-50 text-slate-500 hover:text-slate-700'
             }`}
           >
             <UploadCloud className="w-4 h-4" />
-            Upload File
+            {t.uploadFile}
           </button>
           <button
             onClick={() => setActiveTab('url')}
@@ -81,10 +82,10 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
             }`}
           >
             <Youtube className="w-4 h-4" />
-            YouTube URL
+            {t.youtubeUrl}
             {isYoutubeDisabled && (
               <span className="absolute top-1 right-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-                Coming Soon
+                {t.comingSoon}
               </span>
             )}
           </button>
@@ -95,8 +96,8 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
           {activeTab === 'file' ? (
             <div
               className={`relative border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center text-center transition-all ${
-                dragActive 
-                  ? 'border-blue-500 bg-blue-50/50' 
+                dragActive
+                  ? 'border-blue-500 bg-blue-50/50'
                   : 'border-slate-200 hover:border-blue-400 hover:bg-slate-50/50'
               }`}
               onDragEnter={handleDrag}
@@ -112,16 +113,16 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
                 onChange={handleFileChange}
                 disabled={isProcessing}
               />
-              
+
               <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
                 <FileAudio className="w-8 h-8" />
               </div>
-              
+
               <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                Drag & Drop Media File
+                {t.dragDrop}
               </h3>
               <p className="text-sm text-slate-500 mb-6 max-w-xs">
-                Supports MP3, WAV, MP4, MOV. <br/> Maximum file size depends on your quota.
+                {t.supportedFormats}: MP3, WAV, MP4, MOV <br/> {t.maxFileSize}: 500MB
               </p>
 
               <button
@@ -129,7 +130,7 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
                 disabled={isProcessing}
                 className="px-6 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 focus:ring-4 focus:ring-slate-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isProcessing ? 'Processing...' : 'Browse Files'}
+                {isProcessing ? t.processing : t.browse}
               </button>
             </div>
           ) : (
@@ -140,29 +141,13 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
                 </div>
                 <input
                   type="url"
-                  placeholder="https://www.youtube.com/watch?v=..."
+                  placeholder={t.placeholder}
                   className="block w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all disabled:bg-slate-50 disabled:cursor-not-allowed"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   disabled={isYoutubeDisabled || isProcessing}
                 />
               </div>
-
-              {isYoutubeDisabled ? (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-amber-800 leading-relaxed">
-                    YouTube transcription is coming soon! This feature will allow you to transcribe videos directly into Greek text.
-                  </p>
-                </div>
-              ) : (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-green-800 leading-relaxed">
-                    Enter a YouTube URL to transcribe the video's audio directly into Greek text.
-                  </p>
-                </div>
-              )}
 
               <button
                 type="submit"
@@ -173,7 +158,7 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
                     : 'bg-red-600 text-white hover:bg-red-700 focus:ring-4 focus:ring-red-100 disabled:opacity-50 disabled:cursor-not-allowed shadow-red-600/20'
                 }`}
               >
-                {isYoutubeDisabled ? 'Coming Soon' : isProcessing ? 'Analyzing...' : 'Generate Greek Transcript'}
+                {isYoutubeDisabled ? t.comingSoon : isProcessing ? t.processing : t.transcribe}
               </button>
             </form>
           )}

@@ -5,8 +5,14 @@ import { History, Trash2, FileText } from 'lucide-react';
 import { TranscriptionCard } from '@/components/TranscriptionCard';
 import { SavedTranscription, getSavedTranscriptions, deleteTranscription, clearAllTranscriptions } from '@/lib/storage';
 import Link from 'next/link';
+import { type Locale } from '@/i18n/config';
 
-export default function LibraryPage() {
+interface LibraryPageClientProps {
+  translations: any;
+  lang: Locale;
+}
+
+export default function LibraryPageClient({ translations: t, lang }: LibraryPageClientProps) {
   const [transcriptions, setTranscriptions] = useState<SavedTranscription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -44,7 +50,7 @@ export default function LibraryPage() {
               <History className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Transcription Library</h1>
+              <h1 className="text-3xl font-bold text-slate-900">{t.title}</h1>
               <p className="text-sm text-slate-500 mt-1">
                 {isLoading ? 'Loading...' : `${transcriptions.length} saved ${transcriptions.length === 1 ? 'transcription' : 'transcriptions'}`}
               </p>
@@ -57,7 +63,7 @@ export default function LibraryPage() {
               className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
             >
               <Trash2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Clear All</span>
+              <span className="hidden sm:inline">{t.delete}</span>
             </button>
           )}
         </div>
@@ -73,15 +79,15 @@ export default function LibraryPage() {
             <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <FileText className="w-10 h-10 text-slate-400" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-3">No Transcriptions Yet</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-3">{t.empty.title}</h2>
             <p className="text-slate-600 mb-8 max-w-md mx-auto">
-              Start by transcribing your first audio or video file. All your transcriptions will appear here.
+              {t.empty.subtitle}
             </p>
             <Link
-              href="/"
+              href={`/${lang}`}
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all"
             >
-              Create Your First Transcription
+              {t.empty.button}
             </Link>
           </div>
         ) : (
@@ -92,6 +98,8 @@ export default function LibraryPage() {
                 key={transcription.id}
                 transcription={transcription}
                 onDelete={handleDelete}
+                lang={lang}
+                translations={t}
               />
             ))}
           </div>

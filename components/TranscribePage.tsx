@@ -7,8 +7,15 @@ import { TranscriptView } from '@/components/TranscriptView';
 import { AppStatus, TranscriptionResult, UploadConfig } from '@/types';
 import { saveMultiModelTranscriptions } from '@/lib/storage';
 import { Loader2, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import { type Locale } from '@/i18n/config';
 
-export default function Home() {
+interface TranscribePageProps {
+  translations: any;
+  lang: Locale;
+}
+
+export default function TranscribePage({ translations, lang }: TranscribePageProps) {
+  const t = translations;
   const [status, setStatus] = useState<AppStatus>(AppStatus.IDLE);
   const [results, setResults] = useState<TranscriptionResult[] | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -98,17 +105,21 @@ export default function Home() {
         {status === AppStatus.IDLE && (
           <div className="text-center mb-12 max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-700">
             <h2 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">
-              Turn Video into <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">Greek Text</span>
+              {t.hero.title} <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">{t.hero.titleHighlight}</span>
             </h2>
             <p className="text-lg text-slate-600 leading-relaxed">
-              Upload your video or audio files and let our AI engine generate accurate, fluent Greek transcriptions in seconds.
+              {t.hero.subtitle}
             </p>
           </div>
         )}
 
         {/* State Management */}
         {status === AppStatus.IDLE && (
-          <InputSection onStartProcessing={handleStartProcessing} isProcessing={false} />
+          <InputSection
+            onStartProcessing={handleStartProcessing}
+            isProcessing={false}
+            translations={t.inputSection}
+          />
         )}
 
         {status === AppStatus.PROCESSING && (
@@ -119,9 +130,9 @@ export default function Home() {
                 <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
               </div>
             </div>
-            <h3 className="mt-8 text-xl font-semibold text-slate-900">Transcribing Media...</h3>
+            <h3 className="mt-8 text-xl font-semibold text-slate-900">{t.processing.title}</h3>
             <p className="text-slate-500 mt-2 max-w-md text-center">
-              AI is listening to your audio and translating it to Greek. This may take a moment depending on file size.
+              {t.processing.subtitle}
             </p>
           </div>
         )}
@@ -131,13 +142,13 @@ export default function Home() {
             <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-semibold text-red-900 mb-2">Transcription Failed</h3>
+            <h3 className="text-lg font-semibold text-red-900 mb-2">{t.error.title}</h3>
             <p className="text-sm text-red-700 mb-6">{errorMsg}</p>
             <button
               onClick={resetApp}
               className="px-6 py-2 bg-white border border-red-200 text-red-700 font-medium rounded-lg hover:bg-red-50 transition-colors"
             >
-              Try Again
+              {t.error.button}
             </button>
           </div>
         )}
@@ -146,7 +157,7 @@ export default function Home() {
           <div className="w-full flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="w-full max-w-4xl space-y-6">
               <h2 className="text-2xl font-bold text-slate-900 mb-6">
-                Transcription Complete - {results.filter(r => r.success).length} of {results.length} models succeeded
+                {t.completed.title} - {results.filter(r => r.success).length} {t.completed.modelsSucceeded} {results.length} {t.completed.modelsSucceededSuffix}
               </h2>
 
               {results.map((result, index) => (
@@ -190,21 +201,21 @@ export default function Home() {
                       </div>
                       {result.metadata?.wordCount && (
                         <p className="mt-3 text-xs text-slate-500">
-                          {result.metadata.wordCount} words
+                          {result.metadata.wordCount} {t.completed.words}
                         </p>
                       )}
                     </div>
                   ) : (
                     <div className="mt-4 p-4 bg-red-100 rounded-lg border border-red-300">
                       <p className="text-red-700 font-medium text-sm">
-                        Error: {result.metadata?.error || 'Unknown error occurred'}
+                        {t.completed.error}: {result.metadata?.error || t.completed.unknownError}
                       </p>
                     </div>
                   )}
 
                   {result.metadata?.processingTimeMs && (
                     <p className="mt-4 text-xs text-slate-500">
-                      Processed in {(result.metadata.processingTimeMs / 1000).toFixed(2)}s
+                      {t.completed.processedIn} {(result.metadata.processingTimeMs / 1000).toFixed(2)}s
                     </p>
                   )}
                 </div>
@@ -216,14 +227,14 @@ export default function Home() {
                 onClick={resetApp}
                 className="text-slate-500 hover:text-slate-800 font-medium text-sm border-b border-transparent hover:border-slate-300 transition-all"
               >
-                Transcribe another file
+                {t.completed.transcribeAnother}
               </button>
               <span className="text-slate-300">•</span>
               <Link
-                href="/library"
+                href={`/${lang}/library`}
                 className="text-blue-600 hover:text-blue-700 font-medium text-sm border-b border-transparent hover:border-blue-300 transition-all"
               >
-                View all transcriptions
+                {t.completed.viewAll}
               </Link>
             </div>
           </div>

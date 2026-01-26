@@ -1,0 +1,195 @@
+{
+  "landing": {
+    "hero": {
+      "title1": "Greek meetings.",
+      "title2": "Transcribed perfectly.",
+      "subtitle": "Professional transcription for institutions that demand accuracy, reliability, and clarity.",
+      "cta": "Request Access"
+    },
+    "whoUsesSection": {
+      "badge": "Built For Institutions",
+      "title": "Who uses Grecho",
+      "cards": [
+        {
+          "title": "Municipalities & Local Authorities",
+          "description": "Council meetings, public sessions, and official proceedings requiring accurate documentation."
+        },
+        {
+          "title": "Universities & Research",
+          "description": "Academic discussions, research meetings, and institutional decisions that need clear records."
+        },
+        {
+          "title": "Public Organizations",
+          "description": "Committee meetings, board sessions, and formal discussions requiring official transcripts."
+        },
+        {
+          "title": "Professional Teams",
+          "description": "Legal, academic, and professional environments where precision and accountability matter."
+        }
+      ]
+    },
+    "featuresSection": {
+      "title1": "Powerful features for",
+      "title2": "professional transcription",
+      "features": [
+        {
+          "title": "High-accuracy Greek transcription",
+          "description": "Optimized specifically for formal Greek speech patterns, multiple speakers, and extended meeting durations. Built to understand the nuances of professional discourse."
+        },
+        {
+          "title": "Speaker identification & timestamps",
+          "description": "Automatically identify and label different speakers. Navigate through hours of discussion with precise timestamps and clear attribution."
+        },
+        {
+          "title": "Searchable meeting archives",
+          "description": "Find any decision, statement, or topic instantly across your entire meeting history. Transform audio archives into searchable knowledge bases."
+        },
+        {
+          "title": "Export official records",
+          "description": "Download transcripts in formats ready for archiving, compliance reporting, and official documentation. Seamlessly integrate with your existing workflows."
+        }
+      ]
+    },
+    "officialUseSection": {
+      "title": "Built for environments where accuracy matters",
+      "subtitle1": "Grecho isn't a generic transcription tool.",
+      "subtitle2": "It's engineered for official use.",
+      "points": [
+        "Suitable for council meetings and formal sessions",
+        "Supports long-form discussions and structured debates",
+        "Designed with institutional workflows in mind"
+      ]
+    },
+    "securitySection": {
+      "title": "Secure & reliable",
+      "cards": [
+        {
+          "title": "Secure processing",
+          "description": "Your audio files are processed with enterprise-grade security"
+        },
+        {
+          "title": "Clear practices",
+          "description": "Transparent data handling and compliance-ready workflows"
+        },
+        {
+          "title": "Reliable performance",
+          "description": "Consistent results for scheduled and repeated use"
+        }
+      ],
+      "note": "Additional compliance and deployment options available upon request"
+    },
+    "ctaSection": {
+      "title": "Ready for a pilot?",
+      "subtitle": "Grecho is available through direct onboarding and pilot programs for institutions and professional teams."
+    },
+    "aboutSection": {
+      "title": "Made in Greece, for Greek",
+      "description": "Grecho is developed in Greece with deep understanding of the Greek language and the specific needs of public and professional organizations."
+    },
+    "footer": {
+      "copyright": "© 2025 Grecho — Professional Greek transcription"
+    }
+  },
+  "transcribe": {
+    "hero": {
+      "title": "Turn Video into",
+      "titleHighlight": "Greek Text",
+      "subtitle": "Upload your video or audio files and let our AI engine generate accurate, fluent Greek transcriptions in seconds."
+    },
+    "processing": {
+      "title": "Transcribing Media...",
+      "subtitle": "AI is listening to your audio and translating it to Greek. This may take a moment depending on file size."
+    },
+    "error": {
+      "title": "Transcription Failed",
+      "button": "Try Again"
+    },
+    "completed": {
+      "title": "Transcription Complete",
+      "modelsSucceeded": "of",
+      "modelsSucceededSuffix": "models succeeded",
+      "words": "words",
+      "processedIn": "Processed in",
+      "transcribeAnother": "Transcribe another file",
+      "viewAll": "View all transcriptions",
+      "error": "Error",
+      "unknownError": "Unknown error occurred"
+    }
+  },
+  "library": {
+    "title": "Transcription Library",
+    "empty": {
+      "title": "No transcriptions yet",
+      "subtitle": "Your completed transcriptions will appear here.",
+      "button": "Start Transcribing"
+    },
+    "delete": "Delete",
+    "model": "Model",
+    "date": "Date"
+  },
+  "libraryDetail": {
+    "backToLibrary": "Back to Library",
+    "model": "Model",
+    "date": "Date",
+    "wordCount": "words",
+    "processingTime": "Processed in",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete this transcription?",
+    "notFound": "Transcription not found",
+    "loading": "Loading transcription...",
+    "notFoundTitle": "Transcription Not Found",
+    "notFoundDescription": "The transcription you're looking for doesn't exist or may have been deleted.",
+    "download": "Download",
+    "copy": "Copy to clipboard",
+    "audioDuration": "Audio Duration",
+    "transcriptionCost": "Estimated Cost"
+  },
+  "inputSection": {
+    "uploadFile": "Upload File",
+    "youtubeUrl": "YouTube URL",
+    "comingSoon": "Coming Soon",
+    "dragDrop": "Drag and drop your audio or video file here",
+    "or": "or",
+    "browse": "Browse Files",
+    "supportedFormats": "Supported formats",
+    "maxFileSize": "Max file size",
+    "enterYoutubeUrl": "Enter YouTube video URL",
+    "placeholder": "https://www.youtube.com/watch?v=...",
+    "transcribe": "Transcribe",
+    "processing": "Processing...",
+    "urlRequired": "Please enter a YouTube URL"
+  },
+  "header": {
+    "transcribe": "Transcribe",
+    "library": "Library",
+    "about": "About"
+  },
+  "footer": {
+    "madeWith": "Made with",
+    "in": "in",
+    "greece": "Greece"
+  },
+  "common": {
+    "delete": "Delete",
+    "download": "Download",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "save": "Save",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "viewDetails": "View details",
+    "per": "per",
+    "min": "min",
+    "hr": "hr",
+    "words": "words",
+    "models": "models",
+    "succeeded": "succeeded"
+  }
+}

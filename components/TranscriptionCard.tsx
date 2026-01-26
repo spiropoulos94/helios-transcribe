@@ -4,13 +4,16 @@ import { FileText, Download, Trash2, ChevronDown, ChevronUp, Copy, CheckCircle2,
 import { SavedTranscription } from '@/lib/storage';
 import { formatDuration, formatProcessingTime } from '@/lib/utils/format';
 import { calculateTranscriptionCost } from '@/lib/pricing/calculator';
+import { type Locale } from '@/i18n/config';
 
 interface TranscriptionCardProps {
   transcription: SavedTranscription;
   onDelete: (id: string) => void;
+  lang: Locale;
+  translations: any;
 }
 
-export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcription, onDelete }) => {
+export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcription, onDelete, lang, translations: t }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -93,7 +96,7 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
 
   return (
     <Link
-      href={`/library/${transcription.id}`}
+      href={`/${lang}/library/${transcription.id}`}
       className="block group"
     >
       <div className="bg-white rounded-xl shadow-sm hover:shadow-md border border-slate-200 transition-all duration-200 group-hover:border-blue-300">
