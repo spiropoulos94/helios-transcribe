@@ -53,3 +53,5 @@ next-env.d.ts
 youtube-*.mp3
 
 *.mp3
+
+service-account-key.json
