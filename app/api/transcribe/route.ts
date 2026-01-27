@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TranscriptionInput, TranscriptionConfig, AITranscriptionProvider } from '@/lib/ai';
 import { ElevenLabsProvider } from '@/lib/ai/providers/elevenlabs';
 import { GoogleGeminiProvider } from '@/lib/ai/providers/google';
+import { OpenAIProvider } from '@/lib/ai/providers/openai';
 import { extractAudioFromYouTube } from '@/lib/youtube';
 import { readFile } from 'fs/promises';
 import { featureFlags } from '@/lib/config';
@@ -127,6 +128,11 @@ export async function POST(request: NextRequest) {
           provider = new GoogleGeminiProvider({
             model: modelConfig.modelName,
             enableStructuredOutput: true, // Enable structured JSON output with speakers, timestamps, emotions
+          });
+        } else if (providerType === 'openai') {
+          provider = new OpenAIProvider({
+            whisperModel: modelConfig.modelName,
+            gptModel: modelConfig.modelName,
           });
         } else {
           throw new Error(`Unsupported provider type: ${providerType}`);

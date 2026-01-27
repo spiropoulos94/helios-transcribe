@@ -1,5 +1,28 @@
 // Models to process for multi-model transcription
 export const MODELS_TO_PROCESS = [
+  // Testing OpenAI GPT-4o transcription with speaker diarization
+  // {
+  //   providerType: 'openai' as const,
+  //   modelName: 'gpt-4o-transcribe-diarize',
+  //   displayName: 'OpenAI GPT-4o Transcribe Diarize',
+  //   pricing: {
+  //     model10min: '$0.06',
+  //     model30min: '$0.18',
+  //     model1hr: '$0.36',
+  //     bestFor: 'Transcription with speaker identification',
+  //   },
+  // },
+  // {
+  //   providerType: 'openai' as const,
+  //   modelName: 'gpt-4o-transcribe',
+  //   displayName: 'OpenAI GPT-4o Transcribe',
+  //   pricing: {
+  //     model10min: '$0.06',
+  //     model30min: '$0.18',
+  //     model1hr: '$0.36',
+  //     bestFor: 'High accuracy transcription',
+  //   },
+  // },
   {
     providerType: 'elevenlabs' as const,
     modelName: 'scribe_v2',
@@ -33,17 +56,17 @@ export const MODELS_TO_PROCESS = [
   //     bestFor: 'Best Value - Good quality',
   //   },
   // },
-  {
-    providerType: 'google-gemini' as const,
-    modelName: 'gemini-3-pro-preview',
-    displayName: 'Gemini 3 Pro Preview',
-    pricing: {
-      model10min: '$0.07',
-      model30min: '$0.22',
-      model1hr: '$0.44',
-      bestFor: 'Latest model - Best Greek quality',
-    },
-  },
+  // {
+  //   providerType: 'google-gemini' as const,
+  //   modelName: 'gemini-3-pro-preview',
+  //   displayName: 'Gemini 3 Pro Preview',
+  //   pricing: {
+  //     model10min: '$0.07',
+  //     model30min: '$0.22',
+  //     model1hr: '$0.44',
+  //     bestFor: 'Latest model - Best Greek quality',
+  //   },
+  // },
   // {
   //   providerType: 'openai' as const,
   //   modelName: 'whisper-1',

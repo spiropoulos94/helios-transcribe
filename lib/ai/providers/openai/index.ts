@@ -40,8 +40,8 @@ export class OpenAIProvider implements AITranscriptionProvider {
   constructor(config?: OpenAIProviderConfig) {
     this.config = {
       apiKey: config?.apiKey || aiConfig.OPENAI_API_KEY || '',
-      whisperModel: config?.whisperModel || 'whisper-1',
-      gptModel: config?.gptModel || 'gpt-5', // Use GPT-5 for best quality
+      whisperModel: config?.whisperModel || 'gpt-4o-transcribe-diarize',
+      gptModel: config?.gptModel || 'gpt-4o-transcribe-diarize',
     };
 
     if (this.config.apiKey) {
@@ -100,25 +100,70 @@ export class OpenAIProvider implements AITranscriptionProvider {
 
     const startTime = Date.now();
 
-    // Step 1: Transcribe with Whisper
+    // Step 1: Transcribe with Whisper or GPT-4o Transcribe
     const file = new File([input.buffer], input.fileName, { type: input.mimeType });
 
-    // Use verbose_json to get timestamps and detailed output
-    const transcription = await this.client.audio.transcriptions.create({
+    const isGpt4oTranscribe = this.config.whisperModel.includes('gpt-4o-transcribe');
+    const isDiarizeModel = this.config.whisperModel.includes('diarize');
+
+    // Determine response format:
+    // - gpt-4o-transcribe: only supports 'json' or 'text'
+    // - gpt-4o-transcribe-diarize: supports 'json', 'text', or 'diarized_json'
+    // - whisper-1: supports 'verbose_json', 'json', 'text', etc.
+    let responseFormat: string;
+    if (isDiarizeModel) {
+      // For diarize model, use 'diarized_json' to get speaker information
+      responseFormat = 'diarized_json';
+    } else if (isGpt4oTranscribe) {
+      // For standard gpt-4o-transcribe, use 'json' (only supports json or text)
+      responseFormat = 'json';
+    } else {
+      // For whisper-1, use verbose_json for timestamps, or text
+      responseFormat = config.enableTimestamps ? 'verbose_json' : 'text';
+    }
+
+    const transcriptionParams: any = {
       file,
       model: this.config.whisperModel,
-      response_format: config.enableTimestamps ? 'verbose_json' : 'text',
-      timestamp_granularities: config.enableTimestamps ? ['segment'] : undefined,
-    });
+      response_format: responseFormat,
+    };
+
+    // timestamp_granularities only supported by whisper-1, not gpt-4o-transcribe
+    if (!isGpt4oTranscribe && config.enableTimestamps) {
+      transcriptionParams.timestamp_granularities = ['segment'];
+    }
+
+    // chunking_strategy required for diarize models (recommended: 'auto')
+    if (isDiarizeModel) {
+      transcriptionParams.chunking_strategy = 'auto';
+    }
+
+    const transcription = await this.client.audio.transcriptions.create(transcriptionParams);
 
     // Extract text from response (can be string or object depending on format)
     let rawText: string;
     if (typeof transcription === 'string') {
       rawText = transcription;
     } else {
-      // verbose_json response - format segments with timestamps
-      const transcriptionObj = transcription as any; // Type assertion for verbose_json response
-      if (config.enableTimestamps && transcriptionObj.segments) {
+      const transcriptionObj = transcription as any;
+
+      // Handle diarized_json format (gpt-4o-transcribe-diarize)
+      if (isDiarizeModel && transcriptionObj.segments) {
+        // Format with speaker labels and timestamps
+        rawText = transcriptionObj.segments
+          .map((segment: any) => {
+            const timestamp = this.formatTimestamp(segment.start);
+            const speaker = segment.speaker || 'Unknown';
+            return `${timestamp} [${speaker}] ${segment.text}`;
+          })
+          .join('\n');
+      }
+      // Handle json format (gpt-4o-transcribe)
+      else if (isGpt4oTranscribe && transcriptionObj.text) {
+        rawText = transcriptionObj.text;
+      }
+      // Handle verbose_json format (whisper-1)
+      else if (config.enableTimestamps && transcriptionObj.segments) {
         rawText = transcriptionObj.segments
           .map((segment: any) => {
             const timestamp = this.formatTimestamp(segment.start);
@@ -131,10 +176,14 @@ export class OpenAIProvider implements AITranscriptionProvider {
     }
 
     // Step 2: Translate and format with GPT (if target language differs or speaker ID needed)
+    // Note: GPT-4o transcribe models can't be used for post-processing (they're not chat models)
+    // Only use post-processing if we have a valid chat model (not a transcription model)
+    const isValidChatModel = !this.config.gptModel.includes('transcribe') && !this.config.gptModel.includes('whisper');
     const needsPostProcessing =
-      config.targetLanguage.toLowerCase() !== 'english' ||
-      config.enableSpeakerIdentification ||
-      config.enableTimestamps; // Always post-process if timestamps needed for better formatting
+      isValidChatModel &&
+      (config.targetLanguage.toLowerCase() !== 'english' ||
+        config.enableSpeakerIdentification ||
+        config.enableTimestamps); // Always post-process if timestamps needed for better formatting
 
     let finalText: string;
     let modelUsed: string;
