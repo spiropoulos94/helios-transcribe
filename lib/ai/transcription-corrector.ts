@@ -345,56 +345,50 @@ export class TranscriptionCorrector {
   ): string {
     const languageName = languageCode === 'el' ? 'Greek' : 'the target language';
 
-    let prompt = `You are an expert ${languageName} transcription corrector. Your job is to fix audio transcription errors using context and Greek language knowledge.
+    let prompt = `You are an expert ${languageName} transcription corrector. Your job is to fix audio transcription errors using context and language knowledge.
 
-**CORE PRINCIPLE:** Fix words that are CLEARLY wrong (non-existent or nonsensical), but PRESERVE correct words even if unusual.
+**CORE PRINCIPLE:** Fix words that are CLEARLY wrong (non-existent or nonsensical), but PRESERVE correct words even if unusual or unfamiliar.
 
 **PRIORITY 1: NON-EXISTENT WORDS (Always Fix)**
-- Words that don't exist in Greek dictionaries → Find phonetically-similar real word
-- Examples of common errors:
-  * "ήμο" → "Δήμο" (municipality)
-  * "Αρρωδιά" → "Ροδιά" (village name - if context suggests a place)
-  * "νερο" → "νερό" (missing accent)
-  * "Δημος" → "Δήμος" (missing accent)
+- Words that don't exist in ${languageName} dictionaries → Find phonetically-similar real word
+${languageCode === 'el' ? '- Missing accents make words non-existent (e.g., "νερο" doesn\'t exist, "νερό" does)' : ''}
+- Only fix if you're confident the word is truly non-existent, not just rare or specialized
 
 **PRIORITY 2: USE CONTEXT INTELLIGENTLY**
-- Read the ENTIRE text to understand the topic (government, sports, university, interview, etc.)
-- Use context clues to fix ambiguous words:
-  * If listing place names → fix misspelled places
-  * If discussing organizations → fix organization names
-  * If academic context → fix technical terms
-  * If sports context → fix team/player names
-- Common Greek contexts you might encounter:
-  * **Government/Municipality**: Δήμος, Περιφέρεια, Υπουργείο, Νομός, ΠΕΔ, ΔΕΥΑ, ΔΕΔΔΗΕ
-  * **Education**: Πανεπιστήμιο, Σχολείο, Καθηγητής, Φοιτητής, Διδάσκαλος
-  * **Sports**: Ομάδα, Γήπεδο, Αθλητής, Προπονητής, Πρωτάθλημα
-  * **Business**: Εταιρεία, Επιχείρηση, Διευθυντής, Υπάλληλος
-  * **Geography**: City/village names across Greece (not just Crete)
+- Read the ENTIRE text to understand the topic/domain
+- Use context clues to fix ambiguous words
+- Different domains have different terminology:
+  * Government/Municipal contexts
+  * Educational/Academic contexts
+  * Sports/Athletics contexts
+  * Business/Corporate contexts
+  * Geographic/Location references
+- Context helps distinguish between phonetically-similar words
 
-**PRIORITY 3: GREEK DIACRITICS (τόνοι)**
+${languageCode === 'el' ? `**PRIORITY 3: GREEK DIACRITICS (τόνοι)**
 - Every Greek word (except monosyllables and exceptions) needs an accent
 - Fix ALL missing or wrong accents
 - This is NOT optional - accents are mandatory in Greek
-
-**PRIORITY 4: PROPER NOUNS**
-- **Context-based detection**: Words following titles (κύριο/κυρία/κύριε/Δρ./Καθηγητής) are likely proper nouns
-- **Semantic check**: If a grammatically correct Greek word appears in a context where it makes no semantic sense, consider if it might be a mishearing of a proper noun
-- Greek names: Fix phonetic errors (e.g., "Γιώργος" not "Γιωργος")
-- Place names: Fix if clearly misspelled AND you recognize the correct form
-- Organizations: Fix common Greek organizations if you recognize them
-- **When uncertain about a proper noun, PRESERVE it** - don't "correct" it to a common word just because the common word exists
+` : ''}
+**PRIORITY ${languageCode === 'el' ? '4' : '3'}: PROPER NOUNS**
+- **Context-based detection**: Words following titles are likely proper nouns
+- **Semantic check**: If a word is grammatically correct but semantically nonsensical in context, it might be a mishearing of a proper noun
+- Fix proper nouns ONLY if:
+  1. They're clearly misspelled (phonetic errors, missing accents)
+  2. You can confidently identify the correct form
+- **When uncertain about a proper noun, PRESERVE it** - don't "correct" to a common word just because that word exists
+- Unknown proper nouns should stay as-is - they might be correct regional names, surnames, or organizations
 
 **WHAT TO FIX:**
-✅ Non-existent words (ALWAYS)
-✅ Missing/wrong accents (ALWAYS)
-✅ Obvious phonetic errors you can confidently fix with context
-✅ Misspelled proper nouns you recognize
+✅ Non-existent words (ALWAYS - but verify they're truly non-existent)
+${languageCode === 'el' ? '✅ Missing/wrong accents (ALWAYS)\n' : ''}✅ Obvious phonetic errors you can confidently fix with context
+✅ Clearly misspelled proper nouns you recognize with certainty
 
 **WHAT NOT TO FIX:**
-❌ Correct words (even if unusual or technical)
-❌ Proper nouns you don't recognize (might be correct)
+❌ Correct words (even if unusual, technical, or unfamiliar to you)
+❌ Proper nouns you don't recognize (they might be correct - don't assume)
 ❌ Dialectical variations or regional speech
-❌ Technical jargon specific to the domain (unless clearly wrong)
+❌ Domain-specific jargon (unless clearly wrong)
 ❌ **Timestamps** - PRESERVE the EXACT format (e.g., [0:13], [1:27:45]). DO NOT change brackets, colons, or numbers
 ❌ **Speaker labels** - PRESERVE the EXACT format (e.g., "Speaker 1:", "Speaker 2:"). DO NOT change capitalization or punctuation
 ❌ Overall meaning or structure
@@ -407,9 +401,9 @@ export class TranscriptionCorrector {
 
 **CORRECTION STRATEGY:**
 1. Read full text to identify context/domain
-2. Fix ALL non-existent words and missing accents
+2. Fix ALL truly non-existent words${languageCode === 'el' ? ' and missing accents' : ''}
 3. Use context to fix ambiguous cases
-4. When uncertain about a proper noun, KEEP IT (don't guess)
+4. When uncertain about ANY word (especially proper nouns), PRESERVE IT - don't guess
 
 `;
 
@@ -435,14 +429,14 @@ ${text}
 
 **FORMAT PRESERVATION EXAMPLE:**
 INPUT:
-[0:13] Speaker 1: Ευχαριστούμε τον κύριο Χλωρού για την τοποθέτησή του.
+[0:13] Speaker 1: [some text with errors]
 
-IF "Χλωρού" is wrong (doesn't exist in Greek or seems like a mishearing), OUTPUT:
-[0:13] Speaker 1: Ευχαριστούμε τον κύριο Ξυλουρή για την τοποθέτησή του.
+IF you find a non-existent word or clear error, OUTPUT:
+[0:13] Speaker 1: [text with only the actual errors corrected]
 
-Notice: [0:13] stays [0:13], "Speaker 1:" stays "Speaker 1:", ONLY the erroneous word was corrected.
+Notice: Timestamps and speaker labels stay EXACTLY the same. Only correct genuine errors in the content.
 
-IMPORTANT: Be AGGRESSIVE with corrections. Non-existent words are ALWAYS errors. Fix them!`;
+IMPORTANT: Be AGGRESSIVE with true errors (non-existent words${languageCode === 'el' ? ', missing accents' : ''}), but CONSERVATIVE with unfamiliar words - if a word might be correct (proper noun, technical term, regional variant), PRESERVE it. When in doubt, keep it.`;
 
     return prompt;
   }
@@ -461,30 +455,33 @@ IMPORTANT: Be AGGRESSIVE with corrections. Non-existent words are ALWAYS errors.
     let prompt = `You are an expert ${languageName} transcription corrector. Fix audio transcription errors using context.
 
 **FIX IMMEDIATELY:**
-1. **NON-EXISTENT WORDS**: Words that don't exist in Greek → Find phonetically-similar real word
-   - Examples: "ήμο" → "Δήμο", "νερο" → "νερό", "Δημος" → "Δήμος"
+1. **NON-EXISTENT WORDS**: Words that don't exist in ${languageName} → Find phonetically-similar real word that makes sense in context
+   - Verify the word is truly non-existent, not just rare or specialized
 
-2. **MISSING ACCENTS (τόνοι)**: Every Greek word needs correct accent
+${languageCode === 'el' ? `2. **MISSING ACCENTS (τόνοι)**: Every Greek word needs correct accent
    - This is MANDATORY, not optional
 
 3. **OBVIOUS PHONETIC ERRORS**: Use context to identify and fix
-
+` : '2. **OBVIOUS PHONETIC ERRORS**: Use context to identify and fix\n'}
 **USE CONTEXT:**
-- Read ALL segments to understand the topic (government, sports, education, business, etc.)
+- Read ALL segments to understand the topic/domain
 - Use context to fix ambiguous words:
-  * Government context → fix Δήμος, Περιφέρεια, organization names
-  * Education context → fix Πανεπιστήμιο, professor/student names
-  * Sports context → fix team/player names
-  * Business context → fix company/position names
-- **Proper noun preservation**: Words after titles (κύριο/κυρία/κύριε/Δρ.) are likely names - don't "correct" them unless you're certain they're wrong
-- Fix proper nouns ONLY if you confidently recognize them OR if context strongly suggests a correction
+  * Government/Municipal contexts
+  * Educational/Academic contexts
+  * Sports/Athletics contexts
+  * Business/Corporate contexts
+- **Proper noun preservation**: Words after titles are likely names - don't "correct" them unless you're certain they're wrong
+- Fix proper nouns ONLY if:
+  1. They're clearly misspelled AND you confidently recognize the correct form
+  2. Context strongly suggests a specific correction
+- **When uncertain, PRESERVE the original** - unfamiliar proper nouns might be correct
 
 **PRESERVE:**
 - Timestamps (exact format)
 - Speaker labels (exact format)
-- Correct words (even if unusual)
-- Unknown proper nouns (don't guess)
-- Domain-specific jargon
+- Correct words (even if unusual or unfamiliar to you)
+- Unknown proper nouns (don't guess - they might be correct)
+- Domain-specific jargon and technical terms
 
 `;
 
@@ -503,9 +500,9 @@ IMPORTANT: Be AGGRESSIVE with corrections. Non-existent words are ALWAYS errors.
 ${JSON.stringify(structuredData, null, 2)}
 
 **OUTPUT FORMAT:**
-Return corrected structured data with same schema. Fix content fields aggressively. Include correction_count.
+Return corrected structured data with same schema. Fix content fields based on the rules above. Include correction_count.
 
-RULE: Non-existent words are ALWAYS errors. Fix them without hesitation!`;
+RULE: Fix true errors (non-existent words${languageCode === 'el' ? ', missing accents' : ''}) aggressively. But be conservative with unfamiliar words - if it might be correct (proper noun, technical term), preserve it. When in doubt, keep the original.`;
 
     return prompt;
   }
@@ -555,8 +552,6 @@ RULE: Non-existent words are ALWAYS errors. Fix them without hesitation!`;
       const prompt = this.buildAudioAwareCorrectionPrompt(
         text,
         languageCode,
-        preserveTimestamps,
-        preserveSpeakers,
         previousContext,
         nextContext
       );
@@ -640,8 +635,6 @@ RULE: Non-existent words are ALWAYS errors. Fix them without hesitation!`;
   private buildAudioAwareCorrectionPrompt(
     text: string,
     languageCode: string,
-    preserveTimestamps: boolean,
-    preserveSpeakers: boolean,
     previousContext?: string,
     nextContext?: string
   ): string {
@@ -654,38 +647,44 @@ RULE: Non-existent words are ALWAYS errors. Fix them without hesitation!`;
 **CORE PRINCIPLE:** You can HEAR the audio, so use your ears to verify what was actually said. Don't just read the text - LISTEN to it.
 
 **PRIORITY 1: AUDIO VERIFICATION (Your Superpower)**
-- Listen to the audio carefully
-- If the text says "Χλωρού" but you HEAR "Ξυλουρής", fix it
+- Listen to the audio carefully for every single word
+- If the text contains a word but you HEAR a different word in the audio, fix it to match what you actually hear
 - If the text has wrong accents, verify the correct pronunciation from the audio
 - Trust your ears over the text when there's a mismatch
+- Do NOT assume or guess - only correct based on what you actually hear
 
 **PRIORITY 2: NON-EXISTENT WORDS**
 - Words that don't exist in ${languageName} dictionaries → Fix using what you HEAR in the audio
-- Verify phonetically-similar words by listening to the actual pronunciation
+- Listen carefully to verify phonetically-similar words against the actual pronunciation
+- The audio is your source of truth
 
 **PRIORITY 3: PROPER NOUNS (CRITICAL)**
-- Listen carefully to names, places, organizations
-- If a word after "κύριο/κυρία" sounds like a surname but the text has a common word, fix it based on what you HEAR
-- Trust the audio pronunciation for proper nouns
+- Listen carefully to ALL names, places, and organizations
+- Words following titles (like "κύριος/κυρία/Δρ./Καθηγητής") are likely proper nouns - listen extra carefully
+- If you hear a proper noun that's misspelled in the text, fix it based on the pronunciation you hear
+- Do NOT change proper nouns based on assumptions - only based on what you clearly hear in the audio
+- Unknown names should be transcribed exactly as they sound, not "corrected" to known names
 
-**PRIORITY 4: GREEK DIACRITICS (τόνοι)**
+**PRIORITY 4: ${languageCode === 'el' ? 'GREEK DIACRITICS (τόνοι)' : 'DIACRITICS'}**
 - Listen to where the stress falls in the audio
 - Fix accents based on the actual pronunciation you hear
-- Every Greek word (except monosyllables) needs the accent on the stressed syllable
+${languageCode === 'el' ? '- Every Greek word (except monosyllables) needs the accent on the stressed syllable' : ''}
 
 **PRIORITY 5: CONTEXT + AUDIO**
 - Use the audio context (tone, pauses, emphasis) to understand meaning
 - Verify ambiguous words by listening to surrounding audio
+- Let the audio guide you, not your assumptions about what "should" be said
 
 **WHAT TO FIX:**
 ✅ Words where the text doesn't match what you HEAR in the audio (ALWAYS)
-✅ Non-existent words (ALWAYS)
+✅ Non-existent words - replace with what you actually hear (ALWAYS)
 ✅ Missing/wrong accents based on audio pronunciation (ALWAYS)
-✅ Proper nouns that sound different from what's written
+✅ Misspelled proper nouns - correct to match the pronunciation you hear
 ✅ Any clear mismatches between audio and text
 
 **WHAT NOT TO FIX:**
-❌ Text that matches what you hear in the audio (even if unusual)
+❌ Text that matches what you hear in the audio (even if unusual, unknown, or unfamiliar)
+❌ Proper nouns you don't recognize - if they match the audio pronunciation, keep them
 ❌ **Timestamps** - PRESERVE the EXACT format (e.g., [0:13], [1:27:45]). DO NOT change brackets, colons, or numbers
 ❌ **Speaker labels** - PRESERVE the EXACT format (e.g., "Speaker 1:", "Speaker 2:"). DO NOT change capitalization or punctuation
 ❌ Correct transcriptions
@@ -720,14 +719,14 @@ ${text}
 
 **FORMAT PRESERVATION EXAMPLE:**
 INPUT:
-[0:13] Speaker 1: Ευχαριστούμε τον κύριο Χλωρού για την τοποθέτησή του.
+[0:13] Speaker 1: [some text with an error]
 
-IF YOU HEAR "Ξυλουρή" instead of "Χλωρού", OUTPUT:
-[0:13] Speaker 1: Ευχαριστούμε τον κύριο Ξυλουρή για την τοποθέτησή του.
+IF YOU HEAR a different word in the audio, OUTPUT:
+[0:13] Speaker 1: [text with the word corrected to match what you heard]
 
-Notice: [0:13] stays [0:13], "Speaker 1:" stays "Speaker 1:", ONLY the word "Χλωρού" was corrected.
+Notice: Timestamps and speaker labels stay EXACTLY the same. Only correct the content based on what you actually hear.
 
-IMPORTANT: Listen to the audio carefully. Your advantage is that you can HEAR what was actually said. Use that advantage!`;
+IMPORTANT: Listen to the audio carefully for EVERY word. Your advantage is that you can HEAR what was actually said. Only make corrections based on what you clearly hear - don't assume or guess based on what you think "should" be said.`;
 
     return prompt;
   }

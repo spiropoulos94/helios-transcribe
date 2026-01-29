@@ -9,7 +9,7 @@ export type { ChunkSpec, AudioChunk } from './ffmpeg';
 export { adjustTimestamps, adjustStructuredTimestamps, deduplicateAndStitch } from './deduplication';
 export type { ChunkResult } from './deduplication';
 
-export { shouldUseChunking, calculateChunks, processWithChunking } from './chunker';
+export { shouldUseChunking, calculateChunks, calculateOptimalChunkDuration } from './chunker';
 
 export { optimizeAudioForTranscription, isFFmpegAvailable } from './optimizer';
 export type { AudioOptimizationConfig } from './optimizer';

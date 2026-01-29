@@ -1,11 +1,13 @@
 import { AITranscriptionProvider } from './types';
+import { ElevenLabsProvider } from './providers/elevenlabs';
 import { GoogleGeminiProvider } from './providers/google';
 import { OpenAIProvider } from './providers/openai';
 import { aiConfig } from '../config';
 
-export type ProviderType = 'google-gemini' | 'openai';
+export type ProviderType = 'elevenlabs' | 'google-gemini' | 'openai';
 
 const providerRegistry: Record<ProviderType, () => AITranscriptionProvider> = {
+  elevenlabs: () => new ElevenLabsProvider(),
   'google-gemini': () => new GoogleGeminiProvider(),
   openai: () => new OpenAIProvider(),
 };
@@ -41,7 +43,7 @@ export function getDefaultProvider(): AITranscriptionProvider {
   }
 
   // Fallback: try providers in order of preference
-  const preferenceOrder: ProviderType[] = ['google-gemini', 'openai'];
+  const preferenceOrder: ProviderType[] = ['elevenlabs', 'google-gemini', 'openai'];
 
   for (const type of preferenceOrder) {
     const provider = getProvider(type);
@@ -50,7 +52,7 @@ export function getDefaultProvider(): AITranscriptionProvider {
     }
   }
 
-  throw new Error('No AI provider is configured. Please set GEMINI_API_KEY or OPENAI_API_KEY.');
+  throw new Error('No AI provider is configured. Please set ELEVENLABS_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY.');
 }
 
 /**

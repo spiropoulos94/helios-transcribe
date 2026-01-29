@@ -1,37 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPipeline, type TranscriptionRequest, type PipelineInput } from '@/lib/pipeline';
+import { featureFlags } from '@/lib/config';
 
 /**
- * POST /api/transcribe
- * Transcribe audio from an uploaded file
+ * POST /api/youtube/transcribe
+ * Transcribe audio from a YouTube URL
  */
 export async function POST(request: NextRequest) {
   try {
-    // Parse form data
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    // Check if YouTube feature is disabled
+    if (featureFlags.disableYouTube) {
+      return NextResponse.json(
+        { error: 'YouTube transcription is currently unavailable. This feature is coming soon!' },
+        { status: 501 }
+      );
     }
 
-    // Get optional configuration from form data
-    const providerType = formData.get('provider') as string || 'elevenlabs';
-    const providerModel = formData.get('model') as string | null;
-    const enableKeytermExtraction = formData.get('enableKeytermExtraction') !== 'false';
-    const enableTranscriptionCorrection = formData.get('enableTranscriptionCorrection') !== 'false';
-    const enableAudioVerification = formData.get('enableAudioVerification') === 'true';
+    // Parse request body
+    const body = await request.json();
+    const { youtubeUrl, provider, features } = body;
+
+    if (!youtubeUrl) {
+      return NextResponse.json({ error: 'No YouTube URL provided' }, { status: 400 });
+    }
 
     // Build transcription request
     const transcriptionRequest: TranscriptionRequest = {
-      provider: {
-        type: providerType as 'elevenlabs' | 'google-gemini' | 'openai',
-        model: providerModel || undefined,
+      provider: provider || {
+        type: 'elevenlabs',
+        model: 'scribe_v2',
       },
-      features: {
-        enableKeytermExtraction,
-        enableTranscriptionCorrection,
-        enableAudioVerification,
+      features: features || {
+        enableKeytermExtraction: true,
+        enableTranscriptionCorrection: true,
+        enableAudioVerification: false,
       },
       targetLanguage: 'Greek (Ελληνικά)',
       enableSpeakerIdentification: true,
@@ -41,16 +43,14 @@ export async function POST(request: NextRequest) {
     // Create pipeline input
     const pipelineInput: PipelineInput = {
       source: {
-        type: 'file',
-        buffer: await file.arrayBuffer(),
-        mimeType: file.type,
-        fileName: file.name,
+        type: 'youtube',
+        url: youtubeUrl,
       },
       request: transcriptionRequest,
     };
 
     // Create and execute pipeline
-    console.log(`[Transcribe] Starting pipeline for: ${file.name}`);
+    console.log(`[YouTube Transcribe] Starting pipeline for: ${youtubeUrl}`);
     const pipeline = createPipeline(transcriptionRequest);
     const result = await pipeline.execute(pipelineInput);
 
@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
       failureCount: 0,
     });
   } catch (error: unknown) {
-    console.error('[Transcribe] Error:', error);
-    const message = error instanceof Error ? error.message : 'Failed to process the media file.';
+    console.error('[YouTube Transcribe] Error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to transcribe YouTube video.';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
