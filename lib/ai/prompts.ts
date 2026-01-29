@@ -4,6 +4,8 @@ export interface PromptConfig {
   enableTimestamps?: boolean;
   durationSeconds?: number;
   customInstructions?: string;
+  /** Optional keyterms to improve transcription accuracy */
+  keyterms?: string[];
 }
 
 /**
@@ -24,7 +26,7 @@ function formatDuration(seconds: number): string {
  * Build a transcription prompt based on configuration
  */
 export function buildTranscriptionPrompt(config: PromptConfig): string {
-  const { targetLanguage, enableSpeakerIdentification, enableTimestamps, durationSeconds, customInstructions } = config;
+  const { targetLanguage, enableSpeakerIdentification, enableTimestamps, durationSeconds, customInstructions, keyterms } = config;
 
   // Detect if this is a very long file (2+ hours)
   const isVeryLongFile = durationSeconds && durationSeconds >= 7200; // 2+ hours
@@ -42,6 +44,12 @@ ${isVeryLongFile ? `
 - Do NOT stop early or summarize
 - Transcribe ALL spoken content completely
 - Continue until you reach the end of the audio` : ''}
+${keyterms && keyterms.length > 0 ? `
+
+**IMPORTANT TERMINOLOGY**: The following terms are likely to appear in the audio. Pay special attention to transcribing these accurately:
+${keyterms.slice(0, 100).join(', ')}
+
+These terms may include proper nouns, technical terms, organization names, locations, or acronyms. Ensure they are spelled and formatted correctly in the transcription.` : ''}
 `;
 
   if (enableTimestamps) {

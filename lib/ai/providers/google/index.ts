@@ -16,6 +16,8 @@ export interface GoogleProviderConfig {
   pollingIntervalMs?: number;
   requestTimeoutMs?: number;
   enableStructuredOutput?: boolean;
+  /** Optional keyterms to improve transcription accuracy (max 100 terms, 50 chars each) */
+  keyterms?: string[];
 }
 
 export class GoogleGeminiProvider implements AITranscriptionProvider {
@@ -43,7 +45,7 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
   };
 
   private client: GoogleGenAI | null = null;
-  private config: Required<GoogleProviderConfig>;
+  private config: Required<Omit<GoogleProviderConfig, 'keyterms'>> & { keyterms?: string[] };
 
   constructor(config?: GoogleProviderConfig) {
     this.config = {
@@ -52,6 +54,7 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
       pollingIntervalMs: config?.pollingIntervalMs || 2000,
       requestTimeoutMs: config?.requestTimeoutMs || 300000, // 5 minutes default
       enableStructuredOutput: config?.enableStructuredOutput ?? true, // Default: enabled
+      keyterms: config?.keyterms,
     };
 
     if (this.config.apiKey) {
@@ -168,6 +171,7 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
       enableTimestamps: config.enableTimestamps,
       durationSeconds: config.durationSeconds,
       customInstructions: config.customInstructions,
+      keyterms: this.config.keyterms,
     });
 
     // Determine appropriate token limit based on model

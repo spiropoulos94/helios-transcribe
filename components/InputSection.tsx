@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, Youtube, FileAudio, AlertCircle } from 'lucide-react';
+import { UploadCloud, Youtube, FileAudio, AlertCircle, Info } from 'lucide-react';
 import { UploadConfig } from '../types';
 import { featureFlags } from '@/lib/config';
 
@@ -121,9 +121,16 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
               <h3 className="text-lg font-semibold text-slate-900 mb-2">
                 {t.dragDrop}
               </h3>
-              <p className="text-sm text-slate-500 mb-6 max-w-xs">
+              <p className="text-sm text-slate-500 mb-2 max-w-xs">
                 {t.supportedFormats}: MP3, WAV, MP4, MOV <br/> {t.maxFileSize}: 500MB
               </p>
+
+              <div className="flex items-start gap-2 mb-6 px-4 py-3 bg-blue-50 border border-blue-100 rounded-lg max-w-md">
+                <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                <p className="text-xs text-blue-900 text-left">
+                  <strong>Tip:</strong> WAV format is recommended for best transcription accuracy (uncompressed audio)
+                </p>
+              </div>
 
               <button
                 onClick={() => fileInputRef.current?.click()}

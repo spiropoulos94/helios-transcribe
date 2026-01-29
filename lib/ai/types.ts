@@ -44,6 +44,10 @@ export interface TranscriptionConfig {
   durationSeconds?: number;
   /** Custom prompt additions (optional) */
   customInstructions?: string;
+  /** Enable keyterm extraction to improve accuracy (uses Gemini Flash + ElevenLabs Scribe) */
+  enableKeytermExtraction?: boolean;
+  /** Enable post-transcription correction to fix context-aware errors (uses Gemini Flash) */
+  enableTranscriptionCorrection?: boolean;
 }
 
 /**
@@ -66,6 +70,8 @@ export interface TranscriptionResult {
     chunkCount?: number; // Number of chunks processed (if chunked)
     chunkDurationSeconds?: number; // Duration of each chunk in seconds (if chunked)
     overlapSeconds?: number; // Overlap duration between chunks in seconds (if chunked)
+    keyterms?: string[]; // Extracted keyterms used for transcription accuracy
+    keytermCount?: number; // Number of keyterms extracted
   };
   /** Structured transcription data (when available from provider like Gemini) */
   structuredData?: StructuredTranscription;

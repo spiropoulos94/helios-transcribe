@@ -3,6 +3,8 @@ import { TranscriptionInput, TranscriptionConfig, AITranscriptionProvider } from
 import { ElevenLabsProvider } from '@/lib/ai/providers/elevenlabs';
 import { GoogleGeminiProvider } from '@/lib/ai/providers/google';
 import { OpenAIProvider } from '@/lib/ai/providers/openai';
+import { KeytermExtractor } from '@/lib/ai/keyterm-extractor';
+import { TranscriptionCorrector } from '@/lib/ai/transcription-corrector';
 import { extractAudioFromYouTube } from '@/lib/youtube';
 import { readFile } from 'fs/promises';
 import { featureFlags } from '@/lib/config';
@@ -14,6 +16,8 @@ const DEFAULT_CONFIG: TranscriptionConfig = {
   targetLanguage: 'Greek (Ελληνικά)',
   enableSpeakerIdentification: true,
   enableTimestamps: true,
+  enableKeytermExtraction: true, // Enable by default for ElevenLabs
+  enableTranscriptionCorrection: true, // Enable post-processing correction by default
 };
 
 export async function POST(request: NextRequest) {
@@ -122,7 +126,8 @@ export async function POST(request: NextRequest) {
 
         if (providerType === 'elevenlabs') {
           provider = new ElevenLabsProvider({
-            model: modelConfig.modelName as 'scribe_v1' | 'scribe_v2'
+            model: modelConfig.modelName as 'scribe_v1' | 'scribe_v2',
+            // No keyterms here - will be set per-chunk
           });
         } else if (providerType === 'google-gemini') {
           provider = new GoogleGeminiProvider({
@@ -144,12 +149,62 @@ export async function POST(request: NextRequest) {
           throw new Error(validation.error || 'Input validation failed');
         }
 
+        // Determine if keyterms should be used for this model
+        const useKeyterms = modelConfig.enableKeytermExtraction ?? config.enableKeytermExtraction;
+
+        // Track extracted keyterms for metadata
+        let extractedKeyterms: string[] | undefined;
+
         // Decide whether to use chunking
         let result;
         if (duration && shouldUseChunking(duration)) {
           console.log(`[${modelConfig.displayName}] Using chunking`);
-          result = await processWithChunking(optimizedInput, config, provider);
+
+          // Create extractor for providers that support keyterms (ElevenLabs and Gemini)
+          const keytermExtractor = (providerType === 'elevenlabs' || providerType === 'google-gemini') && useKeyterms
+            ? new KeytermExtractor()
+            : undefined;
+
+          // Create corrector if transcription correction is enabled
+          const transcriptionCorrector = config.enableTranscriptionCorrection
+            ? new TranscriptionCorrector()
+            : undefined;
+
+          result = await processWithChunking(optimizedInput, config, provider, keytermExtractor, transcriptionCorrector);
         } else {
+          // Non-chunked transcription - extract keyterms if enabled
+          if ((providerType === 'elevenlabs' || providerType === 'google-gemini') && useKeyterms) {
+            console.log(`[${modelConfig.displayName}] Extracting keyterms for non-chunked file...`);
+
+            try {
+              const keytermExtractor = new KeytermExtractor();
+              const keyterms = await keytermExtractor.extractKeyterms(optimizedInput, {
+                maxKeyterms: 100,
+                minLength: 2,
+                languageCode: 'el',
+              });
+
+              console.log(`[${modelConfig.displayName}] Extracted ${keyterms.length} keyterms`);
+              extractedKeyterms = keyterms; // Save for metadata
+
+              // Create new provider instance with keyterms
+              if (providerType === 'elevenlabs') {
+                provider = new ElevenLabsProvider({
+                  model: modelConfig.modelName as 'scribe_v1' | 'scribe_v2',
+                  keyterms: keyterms,
+                });
+              } else if (providerType === 'google-gemini') {
+                provider = new GoogleGeminiProvider({
+                  model: modelConfig.modelName,
+                  enableStructuredOutput: true,
+                  keyterms: keyterms,
+                });
+              }
+            } catch (error) {
+              console.warn(`[${modelConfig.displayName}] Failed to extract keyterms, continuing without:`, error);
+            }
+          }
+
           result = await provider.transcribe(optimizedInput, config);
         }
 
@@ -165,6 +220,9 @@ export async function POST(request: NextRequest) {
             // Pass through structured data if available (from Gemini)
             structuredData: result.structuredData,
             rawJson: result.rawJson,
+            // Include extracted keyterms if available
+            keyterms: extractedKeyterms,
+            keytermCount: extractedKeyterms?.length,
           },
           provider: result.provider,
           success: true,

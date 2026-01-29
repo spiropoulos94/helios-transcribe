@@ -10,58 +10,133 @@ export interface ChunkResult {
   wasTruncated?: boolean;
   structuredData?: StructuredTranscription;
   rawJson?: string;
+  keyterms?: string[];
+}
+
+/**
+ * Parses a timestamp string into total seconds
+ * Supports formats: [MM:SS], [HH:MM:SS], MM:SS, HH:MM:SS
+ * @param timestamp - Timestamp string to parse
+ * @returns Total seconds, or null if invalid
+ */
+function parseTimestamp(timestamp: string): number | null {
+  // Remove brackets if present
+  const clean = timestamp.replace(/^\[|\]$/g, '').trim();
+
+  if (!clean) {
+    return null;
+  }
+
+  const parts = clean.split(':');
+
+  // Validate we have 2 or 3 parts
+  if (parts.length < 2 || parts.length > 3) {
+    return null;
+  }
+
+  // Parse and validate each part is a valid number
+  const numbers = parts.map(p => {
+    const num = parseInt(p, 10);
+    return isNaN(num) ? null : num;
+  });
+
+  if (numbers.some(n => n === null)) {
+    return null;
+  }
+
+  let totalSeconds: number;
+
+  if (parts.length === 3) {
+    // HH:MM:SS format
+    const [hours, minutes, seconds] = numbers as number[];
+
+    // Validate ranges
+    if (minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59 || hours < 0) {
+      return null;
+    }
+
+    totalSeconds = hours * 3600 + minutes * 60 + seconds;
+  } else {
+    // MM:SS format
+    const [minutes, seconds] = numbers as number[];
+
+    // Validate ranges (minutes can be > 59 in MM:SS format for videos under 1 hour)
+    if (minutes < 0 || seconds < 0 || seconds > 59) {
+      return null;
+    }
+
+    totalSeconds = minutes * 60 + seconds;
+  }
+
+  return totalSeconds;
+}
+
+/**
+ * Formats seconds into a timestamp string
+ * Returns [HH:MM:SS] if hours > 0, otherwise [MM:SS]
+ * @param totalSeconds - Total seconds to format
+ * @param forceHourFormat - Force HH:MM:SS format even if hours is 0
+ * @returns Formatted timestamp string with brackets
+ */
+function formatTimestamp(totalSeconds: number, forceHourFormat = false): string {
+  // Handle negative times (shouldn't happen, but safety)
+  if (totalSeconds < 0) {
+    totalSeconds = 0;
+  }
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+
+  if (hours > 0 || forceHourFormat) {
+    return `[${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}]`;
+  }
+  return `[${minutes}:${seconds.toString().padStart(2, '0')}]`;
 }
 
 /**
  * Adjusts timestamps in transcribed text by adding an offset
  * Handles both [MM:SS] and [HH:MM:SS] formats
  * @param text - Transcribed text containing timestamps
- * @param offsetSeconds - Number of seconds to add to each timestamp
+ * @param offsetSeconds - Number of seconds to add to each timestamp (can be decimal)
  * @returns Text with adjusted timestamps
  */
 export function adjustTimestamps(text: string, offsetSeconds: number): string {
-  if (offsetSeconds === 0) {
+  if (offsetSeconds === 0 || !text) {
     return text;
   }
 
+  // Round offset to nearest second for consistency
+  const roundedOffset = Math.round(offsetSeconds);
+
   // Match timestamps in format [MM:SS] or [HH:MM:SS]
+  // More robust regex that handles various edge cases
   const timestampRegex = /\[(\d{1,2}):(\d{2})(?::(\d{2}))?\]/g;
 
-  return text.replace(timestampRegex, (match, first, second, third) => {
-    let totalSeconds: number;
+  let replacementCount = 0;
+  const result = text.replace(timestampRegex, (match) => {
+    const parsed = parseTimestamp(match);
 
-    if (third !== undefined) {
-      // [HH:MM:SS] format
-      const hours = parseInt(first, 10);
-      const minutes = parseInt(second, 10);
-      const seconds = parseInt(third, 10);
-      totalSeconds = hours * 3600 + minutes * 60 + seconds;
-    } else {
-      // [MM:SS] format
-      const minutes = parseInt(first, 10);
-      const seconds = parseInt(second, 10);
-      totalSeconds = minutes * 60 + seconds;
+    if (parsed === null) {
+      console.warn(`[Timestamp] Failed to parse timestamp: ${match}, keeping original`);
+      return match;
     }
 
-    // Add offset
-    totalSeconds += offsetSeconds;
+    const adjusted = parsed + roundedOffset;
+    replacementCount++;
 
-    // Format back to appropriate format
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = Math.floor(totalSeconds % 60);
-
-    if (hours > 0) {
-      return `[${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}]`;
-    }
-    return `[${minutes}:${seconds.toString().padStart(2, '0')}]`;
+    // Determine if we should use hour format based on the result
+    return formatTimestamp(adjusted);
   });
+
+  console.log(`[Timestamp] Adjusted ${replacementCount} timestamps by +${roundedOffset}s`);
+  return result;
 }
 
 /**
  * Adjusts timestamps in structured data segments by adding an offset
  * @param structuredData - Structured transcription data
- * @param offsetSeconds - Number of seconds to add to each timestamp
+ * @param offsetSeconds - Number of seconds to add to each timestamp (can be decimal)
  * @returns Structured data with adjusted timestamps
  */
 export function adjustStructuredTimestamps(
@@ -72,49 +147,37 @@ export function adjustStructuredTimestamps(
     return structuredData;
   }
 
+  // Round offset to nearest second for consistency
+  const roundedOffset = Math.round(offsetSeconds);
+
   return {
     ...structuredData,
     segments: structuredData.segments.map(segment => ({
       ...segment,
-      timestamp: adjustSingleTimestamp(segment.timestamp, offsetSeconds),
+      timestamp: adjustSingleTimestamp(segment.timestamp, roundedOffset),
     })),
   };
 }
 
 /**
  * Adjusts a single timestamp string by adding an offset
- * @param timestamp - Timestamp string in MM:SS or HH:MM:SS format
- * @param offsetSeconds - Number of seconds to add
- * @returns Adjusted timestamp string
+ * @param timestamp - Timestamp string in MM:SS or HH:MM:SS format (without brackets)
+ * @param offsetSeconds - Number of seconds to add (integer)
+ * @returns Adjusted timestamp string (without brackets)
  */
 function adjustSingleTimestamp(timestamp: string, offsetSeconds: number): string {
-  // Parse timestamp (without brackets)
-  const parts = timestamp.split(':');
-  let totalSeconds: number;
+  const parsed = parseTimestamp(timestamp);
 
-  if (parts.length === 3) {
-    // HH:MM:SS format
-    totalSeconds = parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
-  } else if (parts.length === 2) {
-    // MM:SS format
-    totalSeconds = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-  } else {
-    // Invalid format, return as-is
+  if (parsed === null) {
+    console.warn(`[Timestamp] Failed to parse structured timestamp: ${timestamp}, keeping original`);
     return timestamp;
   }
 
-  // Add offset
-  totalSeconds += offsetSeconds;
+  const adjusted = parsed + offsetSeconds;
 
-  // Format back
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = Math.floor(totalSeconds % 60);
-
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  }
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  // Return without brackets (structured data doesn't use brackets)
+  const formatted = formatTimestamp(adjusted);
+  return formatted.replace(/^\[|\]$/g, '');
 }
 
 /**

@@ -13,6 +13,8 @@ export interface ElevenLabsProviderConfig {
   apiKey?: string;
   /** Model to use: 'scribe_v1' or 'scribe_v2' (default: 'scribe_v2') */
   model?: 'scribe_v1' | 'scribe_v2';
+  /** Optional keyterms to improve transcription accuracy (max 100 terms, 50 chars each) */
+  keyterms?: string[];
 }
 
 
@@ -20,6 +22,7 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
   readonly name = 'elevenlabs';
   private readonly apiKey: string;
   private readonly model: 'scribe_v1' | 'scribe_v2';
+  private readonly keyterms?: string[];
 
   readonly capabilities: ProviderCapabilities = {
     supportedMimeTypes: [
@@ -46,6 +49,7 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
   constructor(config: ElevenLabsProviderConfig = {}) {
     this.apiKey = config.apiKey || process.env.ELEVENLABS_API_KEY || '';
     this.model = config.model || 'scribe_v2';
+    this.keyterms = config.keyterms;
 
     if (!this.apiKey) {
       console.warn('[ElevenLabs] No API key provided. Set ELEVENLABS_API_KEY environment variable.');
@@ -112,6 +116,23 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
         formData.append('timestamps_granularity', 'word');
       } else {
         formData.append('timestamps_granularity', 'none');
+      }
+
+      // Add keyterms if available (up to 100 terms, 50 chars each)
+      if (this.keyterms && this.keyterms.length > 0) {
+        // Validate and truncate keyterms
+        const validKeyterms = this.keyterms
+          .filter(term => term.length > 0 && term.length <= 50)
+          .slice(0, 100);
+
+        if (validKeyterms.length > 0) {
+          // ElevenLabs expects each keyterm as a separate array item, not a JSON string
+          // Use the array directly - FormData will handle it correctly
+          validKeyterms.forEach(term => {
+            formData.append('keyterms', term);
+          });
+          console.log(`[ElevenLabs] Using ${validKeyterms.length} keyterms for improved accuracy`);
+        }
       }
 
       // Make API request
