@@ -18,6 +18,7 @@ const DEFAULT_CONFIG: TranscriptionConfig = {
   enableTimestamps: true,
   enableKeytermExtraction: true, // Enable by default for ElevenLabs
   enableTranscriptionCorrection: true, // Enable post-processing correction by default
+  enableAudioVerification: true, // Disabled by default (doubles cost, but much more accurate for proper nouns)
 };
 
 export async function POST(request: NextRequest) {
@@ -206,6 +207,37 @@ export async function POST(request: NextRequest) {
           }
 
           result = await provider.transcribe(optimizedInput, config);
+
+          // Apply correction for non-chunked files (if enabled)
+          if (config.enableTranscriptionCorrection || config.enableAudioVerification) {
+            try {
+              const corrector = new TranscriptionCorrector();
+
+              if (config.enableAudioVerification) {
+                console.log(`[${modelConfig.displayName}] Applying audio-aware correction...`);
+                const correctionResult = await corrector.correctTranscription(result.text, {
+                  languageCode: 'el',
+                  preserveTimestamps: true,
+                  preserveSpeakers: true,
+                  audioInput: optimizedInput,
+                  enableAudioVerification: true,
+                });
+                result.text = correctionResult.correctedText;
+                console.log(`[${modelConfig.displayName}] Audio-aware correction: ${correctionResult.correctionCount || 0} corrections in ${correctionResult.processingTimeMs}ms`);
+              } else if (config.enableTranscriptionCorrection) {
+                console.log(`[${modelConfig.displayName}] Applying text-only correction...`);
+                const correctionResult = await corrector.correctTranscription(result.text, {
+                  languageCode: 'el',
+                  preserveTimestamps: true,
+                  preserveSpeakers: true,
+                });
+                result.text = correctionResult.correctedText;
+                console.log(`[${modelConfig.displayName}] Text-only correction: ${correctionResult.correctionCount || 0} corrections in ${correctionResult.processingTimeMs}ms`);
+              }
+            } catch (error) {
+              console.warn(`[${modelConfig.displayName}] Correction failed, using original transcription:`, error);
+            }
+          }
         }
 
         results.push({

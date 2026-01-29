@@ -95,7 +95,7 @@ export class KeytermExtractor {
 
       // Use Gemini 2.5 Flash for cheap, fast extraction
       const response = await this.genAI.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-pro-preview',
         contents: createUserContent([
           createPartFromUri(fileMetadata.uri!, fileMetadata.mimeType!),
           prompt,
@@ -104,6 +104,7 @@ export class KeytermExtractor {
           responseMimeType: 'application/json',
           responseSchema: schema,
           maxOutputTokens: 8192, // Increased to handle up to 100 keyterms with longer Greek terms
+          temperature: 0, // Deterministic output for consistent keyterm extraction
         },
       });
 
@@ -205,12 +206,13 @@ export class KeytermExtractor {
 
     return `You are analyzing audio to extract up to 100 important keyterms that will help improve transcription accuracy.
 
-Your task is to identify and extract the most important terms:
-1. **Proper nouns**: Names of people, places, organizations, brands
+Your task is to identify and extract the most important terms that are difficult to transcribe correctly:
+1. **Proper nouns**: Names of people (especially surnames), places, organizations, brands
 2. **Technical terms**: Specialized vocabulary, jargon, domain-specific words
-3. **Organizations**: Company names, institution names
-4. **Locations**: Cities, countries, landmarks
-5. **Acronyms**: Abbreviations and initialisms (e.g., "ΠΕΔ", "CEO", "EU")
+3. **Organizations**: Company names, institution names, government bodies
+4. **Locations**: Cities, villages, countries, landmarks, street names
+5. **Acronyms**: Abbreviations and initialisms (e.g., "ΠΕΔ", "ΔΕΥΑ", "CEO", "EU")
+6. **Titles + Names**: When you hear formal titles (Κύριος, Κυρία, Δρ., Καθηγητής) followed by names, prioritize extracting those names
 
 CRITICAL REQUIREMENTS:
 - Extract up to 100 of the MOST IMPORTANT terms

@@ -1,5 +1,5 @@
-import { GoogleGenAI, Type, createUserContent } from '@google/genai';
-import type { StructuredTranscription } from './types';
+import { GoogleGenAI, Type, createUserContent, createPartFromUri, FileState } from '@google/genai';
+import type { StructuredTranscription, TranscriptionInput } from './types';
 
 /**
  * Options for transcription correction
@@ -15,6 +15,10 @@ export interface CorrectionOptions {
   previousContext?: string;
   /** Context from next chunk (for better corrections at boundaries) */
   nextContext?: string;
+  /** Audio input for audio-aware correction (optional) */
+  audioInput?: TranscriptionInput;
+  /** Enable audio-aware correction (default: false due to cost) */
+  enableAudioVerification?: boolean;
 }
 
 /**
@@ -68,10 +72,26 @@ export class TranscriptionCorrector {
       preserveSpeakers = true,
       previousContext,
       nextContext,
+      audioInput,
+      enableAudioVerification = false,
     } = options;
 
     try {
-      console.log('[TranscriptionCorrector] Starting correction with Gemini Flash...');
+      // If audio verification is enabled and audio input is provided, use audio-aware correction
+      if (enableAudioVerification && audioInput) {
+        console.log('[TranscriptionCorrector] Starting AUDIO-AWARE correction with Gemini Flash...');
+        return await this.correctTranscriptionWithAudio(
+          text,
+          audioInput,
+          languageCode,
+          preserveTimestamps,
+          preserveSpeakers,
+          previousContext,
+          nextContext
+        );
+      }
+
+      console.log('[TranscriptionCorrector] Starting text-only correction with Gemini Flash...');
 
       // Build prompt for correction
       const prompt = this.buildCorrectionPrompt(
@@ -107,6 +127,7 @@ export class TranscriptionCorrector {
           responseMimeType: 'application/json',
           responseSchema: schema,
           maxOutputTokens: 32768, // Increased from 8192 to handle larger corrections
+          temperature: 0, // Deterministic output for consistent corrections
         },
       });
 
@@ -252,6 +273,7 @@ export class TranscriptionCorrector {
           responseMimeType: 'application/json',
           responseSchema: schema,
           maxOutputTokens: 32768, // Increased from 8192 to handle larger transcriptions
+          temperature: 0, // Deterministic output for consistent corrections
         },
       });
 
@@ -355,10 +377,12 @@ export class TranscriptionCorrector {
 - This is NOT optional - accents are mandatory in Greek
 
 **PRIORITY 4: PROPER NOUNS**
+- **Context-based detection**: Words following titles (κύριο/κυρία/κύριε/Δρ./Καθηγητής) are likely proper nouns
+- **Semantic check**: If a grammatically correct Greek word appears in a context where it makes no semantic sense, consider if it might be a mishearing of a proper noun
 - Greek names: Fix phonetic errors (e.g., "Γιώργος" not "Γιωργος")
 - Place names: Fix if clearly misspelled AND you recognize the correct form
 - Organizations: Fix common Greek organizations if you recognize them
-- Titles: Κύριε/Κυρία + name, professional titles
+- **When uncertain about a proper noun, PRESERVE it** - don't "correct" it to a common word just because the common word exists
 
 **WHAT TO FIX:**
 ✅ Non-existent words (ALWAYS)
@@ -371,7 +395,15 @@ export class TranscriptionCorrector {
 ❌ Proper nouns you don't recognize (might be correct)
 ❌ Dialectical variations or regional speech
 ❌ Technical jargon specific to the domain (unless clearly wrong)
-${preserveTimestamps ? '❌ Timestamps - keep exactly as is\n' : ''}${preserveSpeakers ? '❌ Speaker labels - keep exactly as is\n' : ''}❌ Overall meaning or structure
+❌ **Timestamps** - PRESERVE the EXACT format (e.g., [0:13], [1:27:45]). DO NOT change brackets, colons, or numbers
+❌ **Speaker labels** - PRESERVE the EXACT format (e.g., "Speaker 1:", "Speaker 2:"). DO NOT change capitalization or punctuation
+❌ Overall meaning or structure
+
+**CRITICAL FORMAT RULE**: The transcription uses the format "[timestamp] Speaker X: content". You must:
+1. Keep the EXACT timestamp format: [MM:SS] or [HH:MM:SS] with square brackets
+2. Keep the EXACT speaker format: "Speaker 1:", "Speaker 2:", etc.
+3. Keep blank lines between segments
+4. ONLY correct the content (the text after the speaker label)
 
 **CORRECTION STRATEGY:**
 1. Read full text to identify context/domain
@@ -400,6 +432,15 @@ ${text}
   "corrected_text": "the fully corrected transcription",
   "correction_count": number_of_corrections_made
 }
+
+**FORMAT PRESERVATION EXAMPLE:**
+INPUT:
+[0:13] Speaker 1: Ευχαριστούμε τον κύριο Χλωρού για την τοποθέτησή του.
+
+IF "Χλωρού" is wrong (doesn't exist in Greek or seems like a mishearing), OUTPUT:
+[0:13] Speaker 1: Ευχαριστούμε τον κύριο Ξυλουρή για την τοποθέτησή του.
+
+Notice: [0:13] stays [0:13], "Speaker 1:" stays "Speaker 1:", ONLY the erroneous word was corrected.
 
 IMPORTANT: Be AGGRESSIVE with corrections. Non-existent words are ALWAYS errors. Fix them!`;
 
@@ -435,7 +476,8 @@ IMPORTANT: Be AGGRESSIVE with corrections. Non-existent words are ALWAYS errors.
   * Education context → fix Πανεπιστήμιο, professor/student names
   * Sports context → fix team/player names
   * Business context → fix company/position names
-- Fix proper nouns ONLY if you confidently recognize them
+- **Proper noun preservation**: Words after titles (κύριο/κυρία/κύριε/Δρ.) are likely names - don't "correct" them unless you're certain they're wrong
+- Fix proper nouns ONLY if you confidently recognize them OR if context strongly suggests a correction
 
 **PRESERVE:**
 - Timestamps (exact format)
@@ -464,6 +506,228 @@ ${JSON.stringify(structuredData, null, 2)}
 Return corrected structured data with same schema. Fix content fields aggressively. Include correction_count.
 
 RULE: Non-existent words are ALWAYS errors. Fix them without hesitation!`;
+
+    return prompt;
+  }
+
+  /**
+   * Correct a transcription by listening to the audio (audio-aware correction)
+   * This is more accurate but costs more as it processes the audio again
+   */
+  private async correctTranscriptionWithAudio(
+    text: string,
+    audioInput: TranscriptionInput,
+    languageCode: string,
+    preserveTimestamps: boolean,
+    preserveSpeakers: boolean,
+    previousContext?: string,
+    nextContext?: string
+  ): Promise<CorrectionResult> {
+    const startTime = Date.now();
+
+    try {
+      // Upload audio file to Google
+      console.log('[TranscriptionCorrector] Uploading audio for verification...');
+      const uploadedFile = await this.genAI.files.upload({
+        file: new Blob([audioInput.buffer], { type: audioInput.mimeType }),
+        config: {
+          mimeType: audioInput.mimeType,
+          displayName: audioInput.fileName,
+        },
+      });
+
+      console.log('[TranscriptionCorrector] Audio uploaded:', uploadedFile.uri);
+
+      // Wait for file to be processed
+      let fileMetadata = await this.genAI.files.get({ name: uploadedFile.name! });
+      while (fileMetadata.state === FileState.PROCESSING) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        fileMetadata = await this.genAI.files.get({ name: uploadedFile.name! });
+      }
+
+      if (fileMetadata.state === FileState.FAILED) {
+        throw new Error('Audio file processing failed');
+      }
+
+      console.log('[TranscriptionCorrector] Audio ready, starting audio-aware correction...');
+
+      // Build prompt for audio-aware correction
+      const prompt = this.buildAudioAwareCorrectionPrompt(
+        text,
+        languageCode,
+        preserveTimestamps,
+        preserveSpeakers,
+        previousContext,
+        nextContext
+      );
+
+      // Define schema for structured output
+      const schema = {
+        type: Type.OBJECT,
+        properties: {
+          corrected_text: {
+            type: Type.STRING,
+            description: 'The corrected transcription text with all errors fixed',
+          },
+          correction_count: {
+            type: Type.NUMBER,
+            description: 'Number of corrections made',
+          },
+        },
+        required: ['corrected_text', 'correction_count'],
+      };
+
+      // Use Gemini 2.5 Flash with audio + text
+      const response = await this.genAI.models.generateContent({
+        model: 'gemini-3-pro-preview',
+        contents: createUserContent([
+          createPartFromUri(fileMetadata.uri!, fileMetadata.mimeType!),
+          prompt,
+        ]),
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: schema,
+          maxOutputTokens: 32768,
+          temperature: 0, // Deterministic output
+        },
+      });
+
+      const responseText = response.text || '';
+
+      // Parse JSON response
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('[TranscriptionCorrector] Failed to parse JSON response:', parseError);
+        console.error('[TranscriptionCorrector] Response length:', responseText.length);
+        console.error('[TranscriptionCorrector] Response start:', responseText.substring(0, 500));
+        console.error('[TranscriptionCorrector] Response end:', responseText.substring(Math.max(0, responseText.length - 500)));
+
+        throw new Error(`Invalid JSON response from Gemini: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+      }
+
+      const correctedText = data.corrected_text || text;
+      const correctionCount = data.correction_count || 0;
+
+      const processingTimeMs = Date.now() - startTime;
+      console.log(
+        `[TranscriptionCorrector] Audio-aware correction made ${correctionCount} corrections in ${processingTimeMs}ms`
+      );
+
+      // Clean up uploaded file
+      await this.genAI.files.delete({ name: uploadedFile.name! });
+
+      return {
+        correctedText,
+        correctionCount,
+        processingTimeMs,
+      };
+    } catch (error) {
+      console.error('[TranscriptionCorrector] Audio-aware correction failed:', error);
+      // Fall back to original text
+      console.warn('[TranscriptionCorrector] Falling back to original text');
+      return {
+        correctedText: text,
+        processingTimeMs: Date.now() - startTime,
+      };
+    }
+  }
+
+  /**
+   * Build prompt for audio-aware correction
+   */
+  private buildAudioAwareCorrectionPrompt(
+    text: string,
+    languageCode: string,
+    preserveTimestamps: boolean,
+    preserveSpeakers: boolean,
+    previousContext?: string,
+    nextContext?: string
+  ): string {
+    const languageName = languageCode === 'el' ? 'Greek' : 'the target language';
+
+    let prompt = `You are an expert ${languageName} transcription corrector with access to BOTH the audio and the text transcription.
+
+**YOUR TASK:** Listen to the audio and compare it with the text transcription below. Fix any errors you hear.
+
+**CORE PRINCIPLE:** You can HEAR the audio, so use your ears to verify what was actually said. Don't just read the text - LISTEN to it.
+
+**PRIORITY 1: AUDIO VERIFICATION (Your Superpower)**
+- Listen to the audio carefully
+- If the text says "Χλωρού" but you HEAR "Ξυλουρής", fix it
+- If the text has wrong accents, verify the correct pronunciation from the audio
+- Trust your ears over the text when there's a mismatch
+
+**PRIORITY 2: NON-EXISTENT WORDS**
+- Words that don't exist in ${languageName} dictionaries → Fix using what you HEAR in the audio
+- Verify phonetically-similar words by listening to the actual pronunciation
+
+**PRIORITY 3: PROPER NOUNS (CRITICAL)**
+- Listen carefully to names, places, organizations
+- If a word after "κύριο/κυρία" sounds like a surname but the text has a common word, fix it based on what you HEAR
+- Trust the audio pronunciation for proper nouns
+
+**PRIORITY 4: GREEK DIACRITICS (τόνοι)**
+- Listen to where the stress falls in the audio
+- Fix accents based on the actual pronunciation you hear
+- Every Greek word (except monosyllables) needs the accent on the stressed syllable
+
+**PRIORITY 5: CONTEXT + AUDIO**
+- Use the audio context (tone, pauses, emphasis) to understand meaning
+- Verify ambiguous words by listening to surrounding audio
+
+**WHAT TO FIX:**
+✅ Words where the text doesn't match what you HEAR in the audio (ALWAYS)
+✅ Non-existent words (ALWAYS)
+✅ Missing/wrong accents based on audio pronunciation (ALWAYS)
+✅ Proper nouns that sound different from what's written
+✅ Any clear mismatches between audio and text
+
+**WHAT NOT TO FIX:**
+❌ Text that matches what you hear in the audio (even if unusual)
+❌ **Timestamps** - PRESERVE the EXACT format (e.g., [0:13], [1:27:45]). DO NOT change brackets, colons, or numbers
+❌ **Speaker labels** - PRESERVE the EXACT format (e.g., "Speaker 1:", "Speaker 2:"). DO NOT change capitalization or punctuation
+❌ Correct transcriptions
+
+**CRITICAL FORMAT RULE**: The transcription uses the format "[timestamp] Speaker X: content". You must:
+1. Keep the EXACT timestamp format: [MM:SS] or [HH:MM:SS] with square brackets
+2. Keep the EXACT speaker format: "Speaker 1:", "Speaker 2:", etc.
+3. Keep blank lines between segments
+4. ONLY correct the content (the text after the speaker label)
+
+`;
+
+    if (previousContext || nextContext) {
+      prompt += `**CROSS-CHUNK CONTEXT:**\n`;
+      if (previousContext) {
+        prompt += `Previous: "${previousContext}"\n`;
+      }
+      if (nextContext) {
+        prompt += `Next: "${nextContext}"\n`;
+      }
+      prompt += `\n`;
+    }
+
+    prompt += `**TRANSCRIPTION TO VERIFY:**
+${text}
+
+**OUTPUT FORMAT:**
+{
+  "corrected_text": "the fully corrected transcription based on what you HEARD in the audio",
+  "correction_count": number_of_corrections_made
+}
+
+**FORMAT PRESERVATION EXAMPLE:**
+INPUT:
+[0:13] Speaker 1: Ευχαριστούμε τον κύριο Χλωρού για την τοποθέτησή του.
+
+IF YOU HEAR "Ξυλουρή" instead of "Χλωρού", OUTPUT:
+[0:13] Speaker 1: Ευχαριστούμε τον κύριο Ξυλουρή για την τοποθέτησή του.
+
+Notice: [0:13] stays [0:13], "Speaker 1:" stays "Speaker 1:", ONLY the word "Χλωρού" was corrected.
+
+IMPORTANT: Listen to the audio carefully. Your advantage is that you can HEAR what was actually said. Use that advantage!`;
 
     return prompt;
   }

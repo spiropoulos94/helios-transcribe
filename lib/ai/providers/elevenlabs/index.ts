@@ -1,3 +1,8 @@
+import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
+import type {
+  SpeechToTextChunkResponseModel,
+  SpeechToTextWordResponseModel,
+} from '@elevenlabs/elevenlabs-js/api';
 import type {
   AITranscriptionProvider,
   TranscriptionInput,
@@ -20,7 +25,7 @@ export interface ElevenLabsProviderConfig {
 
 export class ElevenLabsProvider implements AITranscriptionProvider {
   readonly name = 'elevenlabs';
-  private readonly apiKey: string;
+  private readonly client: ElevenLabsClient;
   private readonly model: 'scribe_v1' | 'scribe_v2';
   private readonly keyterms?: string[];
 
@@ -47,17 +52,21 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
   };
 
   constructor(config: ElevenLabsProviderConfig = {}) {
-    this.apiKey = config.apiKey || process.env.ELEVENLABS_API_KEY || '';
+    const apiKey = config.apiKey || process.env.ELEVENLABS_API_KEY;
+
+    this.client = new ElevenLabsClient({
+      apiKey,
+    });
     this.model = config.model || 'scribe_v2';
     this.keyterms = config.keyterms;
 
-    if (!this.apiKey) {
+    if (!apiKey) {
       console.warn('[ElevenLabs] No API key provided. Set ELEVENLABS_API_KEY environment variable.');
     }
   }
 
   isConfigured(): boolean {
-    return !!this.apiKey;
+    return !!this.client;
   }
 
   validateInput(input: TranscriptionInput): { valid: boolean; error?: string } {
@@ -93,98 +102,70 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
     try {
       console.log(`[ElevenLabs] Starting transcription with ${this.model}...`);
 
-      // Build form data
-      const formData = new FormData();
-
-      // Add audio file
+      // Create a File object from the buffer
       const blob = new Blob([input.buffer], { type: input.mimeType });
-      formData.append('file', blob, input.fileName);
+      const file = new File([blob], input.fileName, { type: input.mimeType });
 
-      // Add model
-      formData.append('model_id', this.model);
+      // Validate and prepare keyterms
+      const validKeyterms = this.keyterms
+        ?.filter(term => term.length > 0 && term.length <= 50)
+        .slice(0, 100);
 
-      // Add language (Greek)
-      formData.append('language_code', 'el'); // ISO-639-1 code for Greek
-
-      // Add diarization if requested
-      if (config.enableSpeakerIdentification) {
-        formData.append('diarize', 'true');
+      if (validKeyterms && validKeyterms.length > 0) {
+        console.log(`[ElevenLabs] Using ${validKeyterms.length} keyterms for improved accuracy`);
       }
 
-      // Add timestamps (word-level)
-      if (config.enableTimestamps) {
-        formData.append('timestamps_granularity', 'word');
-      } else {
-        formData.append('timestamps_granularity', 'none');
-      }
-
-      // Add keyterms if available (up to 100 terms, 50 chars each)
-      if (this.keyterms && this.keyterms.length > 0) {
-        // Validate and truncate keyterms
-        const validKeyterms = this.keyterms
-          .filter(term => term.length > 0 && term.length <= 50)
-          .slice(0, 100);
-
-        if (validKeyterms.length > 0) {
-          // ElevenLabs expects each keyterm as a separate array item, not a JSON string
-          // Use the array directly - FormData will handle it correctly
-          validKeyterms.forEach(term => {
-            formData.append('keyterms', term);
-          });
-          console.log(`[ElevenLabs] Using ${validKeyterms.length} keyterms for improved accuracy`);
-        }
-      }
-
-      // Make API request
-      const response = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
-        method: 'POST',
-        headers: {
-          'xi-api-key': this.apiKey,
-        },
-        body: formData,
+      // Make API request using the SDK
+      const response = await this.client.speechToText.convert({
+        modelId: this.model,
+        file,
+        languageCode: 'el', // ISO-639-1 code for Greek
+        diarize: config.enableSpeakerIdentification,
+        timestampsGranularity: config.enableTimestamps ? 'word' : 'none',
+        keyterms: validKeyterms,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`ElevenLabs API error (${response.status}): ${errorText}`);
-      }
+      // Type guard to check if response is a chunk response (not webhook or multichannel)
+      if ('text' in response && 'words' in response) {
+        const result = response as SpeechToTextChunkResponseModel;
 
-      const result = await response.json();
+        // Extract text
+        let text = result.text || '';
+        let structuredData: StructuredTranscription | undefined;
+        let rawJson: string | undefined;
 
-      // Extract text
-      let text = result.text || '';
-      let structuredData: StructuredTranscription | undefined;
-      let rawJson: string | undefined;
+        // If word-level data is available, create structured output
+        if (result.words && result.words.length > 0) {
+          // Convert word-level data to structured format
+          structuredData = this.convertWordsToStructuredOutput(result.words);
+          rawJson = JSON.stringify(result);
 
-      // If word-level data is available, create structured output
-      if (result.words && result.words.length > 0) {
-        // Convert word-level data to structured format
-        structuredData = this.convertWordsToStructuredOutput(result.words);
-        rawJson = JSON.stringify(result);
-
-        // Generate plain text from structured data (if speaker identification enabled)
-        if (config.enableSpeakerIdentification) {
-          text = structuredData.segments
-            .map(seg => `[${seg.timestamp}] ${seg.speaker}: ${seg.content}`)
-            .join('\n\n');
+          // Generate plain text from structured data (if speaker identification enabled)
+          if (config.enableSpeakerIdentification) {
+            text = structuredData.segments
+              .map(seg => `[${seg.timestamp}] ${seg.speaker}: ${seg.content}`)
+              .join('\n\n');
+          }
         }
+
+        const processingTimeMs = Date.now() - startTime;
+
+        console.log(`[ElevenLabs] Transcription complete in ${processingTimeMs}ms`);
+
+        return {
+          text,
+          provider: `elevenlabs-${this.model}`,
+          structuredData,
+          rawJson,
+          metadata: {
+            model: this.model,
+            processingTimeMs,
+            wordCount: text.split(/\s+/).length,
+          },
+        };
+      } else {
+        throw new Error('Unexpected response format from ElevenLabs API');
       }
-
-      const processingTimeMs = Date.now() - startTime;
-
-      console.log(`[ElevenLabs] Transcription complete in ${processingTimeMs}ms`);
-
-      return {
-        text,
-        provider: `elevenlabs-${this.model}`,
-        structuredData,
-        rawJson,
-        metadata: {
-          model: this.model,
-          processingTimeMs,
-          wordCount: text.split(/\s+/).length,
-        },
-      };
     } catch (error) {
       console.error('[ElevenLabs] Transcription failed:', error);
       throw new Error(
@@ -210,13 +191,13 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
   /**
    * Convert word-level data to structured transcription format
    */
-  private convertWordsToStructuredOutput(words: any[]): StructuredTranscription {
+  private convertWordsToStructuredOutput(words: SpeechToTextWordResponseModel[]): StructuredTranscription {
     const segments: TranscriptionSegment[] = [];
-    let currentSpeaker: number | null = null;
+    let currentSpeaker: string | null = null;
     let currentSegment: { words: string[]; startTime: number } = { words: [], startTime: 0 };
 
     for (const word of words) {
-      const speakerId = word.speaker_id ?? null;
+      const speakerId = word.speakerId ?? null;
       const startTime = word.start ?? 0;
 
       // New speaker detected or first word
@@ -224,7 +205,7 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
         // Flush current segment if it has content
         if (currentSegment.words.length > 0 && currentSpeaker !== null) {
           segments.push({
-            speaker: `Speaker ${currentSpeaker + 1}`,
+            speaker: `Speaker ${currentSpeaker}`,
             timestamp: this.formatTimestamp(currentSegment.startTime),
             content: currentSegment.words.join(' '),
             language: 'Greek',
@@ -244,7 +225,7 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
     // Flush final segment
     if (currentSegment.words.length > 0 && currentSpeaker !== null) {
       segments.push({
-        speaker: `Speaker ${currentSpeaker + 1}`,
+        speaker: `Speaker ${currentSpeaker}`,
         timestamp: this.formatTimestamp(currentSegment.startTime),
         content: currentSegment.words.join(' '),
         language: 'Greek',

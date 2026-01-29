@@ -70,7 +70,7 @@ export function calculateOptimalChunkDuration(durationSeconds: number): number {
 export function calculateChunks(durationSeconds: number): ChunkSpec[] {
   const chunkDurationMinutes = calculateOptimalChunkDuration(durationSeconds);
   const chunkDurationSeconds = chunkDurationMinutes * 60;
-  const overlapSeconds = 10; // Fixed 10-second overlap
+  const overlapSeconds = 20; // Increased from 10 to 20 seconds for better context and deduplication
 
   const chunks: ChunkSpec[] = [];
   let currentStart = 0;
@@ -156,12 +156,13 @@ async function correctLargeText(
     const chunkWords = words.slice(startIdx, endIdx);
     const chunkText = chunkWords.join(' ');
 
-    // Get context from previous chunk (last 50 words) and next chunk (first 50 words) if available
+    // Get context from previous chunk (last 150 words) and next chunk (first 150 words) if available
+    // Increased from 50 to 150 for better context continuity and proper noun recognition
     const prevContext = startIdx > 0
-      ? words.slice(Math.max(0, startIdx - 50), startIdx).join(' ')
+      ? words.slice(Math.max(0, startIdx - 150), startIdx).join(' ')
       : undefined;
     const nextContext = endIdx < totalWords
-      ? words.slice(endIdx, Math.min(endIdx + 50, totalWords)).join(' ')
+      ? words.slice(endIdx, Math.min(endIdx + 150, totalWords)).join(' ')
       : undefined;
 
     console.log(`[Correction] Processing chunk ${chunkNum} (words ${startIdx + 1}-${endIdx} of ${totalWords})...`);
@@ -235,7 +236,7 @@ export async function processWithChunking(
     const chunkSpecs = calculateChunks(duration);
     console.log(
       `[Audio Chunking] Creating ${chunkSpecs.length} chunks ` +
-      `(${chunkDurationMinutes} min each, 10s overlap)`
+      `(${chunkDurationMinutes} min each, 20s overlap)`
     );
 
     // 3. Split audio into chunk files
@@ -247,7 +248,8 @@ export async function processWithChunking(
       provider,
       config,
       audioConfig.maxConcurrentChunks,
-      keytermExtractor
+      keytermExtractor,
+      transcriptionCorrector
     );
 
     // 5. Adjust timestamps in each chunk (both text and structured data)
@@ -285,12 +287,16 @@ export async function processWithChunking(
     let finalText = deduplicateAndStitch(adjustedChunks);
 
     // 7. Apply post-processing correction to the final stitched text (if enabled)
-    if (transcriptionCorrector && config.enableTranscriptionCorrection) {
+    // Note: Skip final correction if per-chunk audio verification was already applied
+    if (transcriptionCorrector && config.enableTranscriptionCorrection && !config.enableAudioVerification) {
       try {
+        console.log('[Audio Chunking] Applying text-only correction to final stitched text...');
         finalText = await correctLargeText(finalText, transcriptionCorrector);
       } catch (error) {
         console.warn(`[Audio Chunking] Failed to correct final text, using uncorrected version:`, error);
       }
+    } else if (config.enableAudioVerification) {
+      console.log('[Audio Chunking] Skipping final correction (per-chunk audio verification was already applied)');
     }
 
     // 8. Calculate aggregate metadata
@@ -351,7 +357,7 @@ export async function processWithChunking(
         chunked: true,
         chunkCount: audioChunks.length,
         chunkDurationSeconds: chunkDurationMinutes * 60,
-        overlapSeconds: 10,
+        overlapSeconds: 20,
         wasTruncated: anyTruncated,
         finishReason: anyTruncated ? 'MAX_TOKENS' : 'STOP',
         keyterms: aggregatedKeyterms.length > 0 ? aggregatedKeyterms : undefined,
@@ -372,6 +378,8 @@ export async function processWithChunking(
  * @param provider - AI transcription provider
  * @param config - Transcription configuration
  * @param maxConcurrent - Maximum number of chunks to process in parallel (0 = sequential, -1 = unlimited)
+ * @param keytermExtractor - Optional keyterm extractor
+ * @param transcriptionCorrector - Optional transcription corrector for audio verification
  * @returns Array of chunk results in original order
  */
 async function processChunksWithConcurrency(
@@ -379,7 +387,8 @@ async function processChunksWithConcurrency(
   provider: AITranscriptionProvider,
   config: TranscriptionConfig,
   maxConcurrent: number,
-  keytermExtractor?: KeytermExtractor
+  keytermExtractor?: KeytermExtractor,
+  transcriptionCorrector?: TranscriptionCorrector
 ): Promise<ChunkResult[]> {
   // If maxConcurrent is 0 or 1, process sequentially
   if (maxConcurrent === 0 || maxConcurrent === 1) {
@@ -390,7 +399,7 @@ async function processChunksWithConcurrency(
         `[Audio Chunking] Processing chunk ${chunk.index + 1}/${chunk.total}: ` +
         `${formatDuration(chunk.startTime)} - ${formatDuration(chunk.endTime)}`
       );
-      const result = await processChunk(chunk, provider, config, keytermExtractor);
+      const result = await processChunk(chunk, provider, config, keytermExtractor, transcriptionCorrector);
       results.push(result);
     }
     return results;
@@ -405,7 +414,7 @@ async function processChunksWithConcurrency(
           `[Audio Chunking] Starting chunk ${chunk.index + 1}/${chunk.total}: ` +
           `${formatDuration(chunk.startTime)} - ${formatDuration(chunk.endTime)}`
         );
-        const result = await processChunk(chunk, provider, config, keytermExtractor);
+        const result = await processChunk(chunk, provider, config, keytermExtractor, transcriptionCorrector);
         console.log(
           `[Audio Chunking] ✓ Completed chunk ${chunk.index + 1}/${chunk.total}`
         );
@@ -434,7 +443,7 @@ async function processChunksWithConcurrency(
           `${formatDuration(chunk.startTime)} - ${formatDuration(chunk.endTime)}`
         );
 
-        processChunk(chunk, provider, config, keytermExtractor)
+        processChunk(chunk, provider, config, keytermExtractor, transcriptionCorrector)
           .then(result => {
             results[currentIndex] = result;
             console.log(
@@ -467,13 +476,15 @@ async function processChunksWithConcurrency(
  * @param provider - AI transcription provider
  * @param config - Transcription configuration
  * @param keytermExtractor - Optional keyterm extractor for improving accuracy
+ * @param transcriptionCorrector - Optional transcription corrector for per-chunk audio verification
  * @returns ChunkResult with transcribed text and metadata
  */
 async function processChunk(
   chunk: AudioChunk,
   provider: AITranscriptionProvider,
   config: TranscriptionConfig,
-  keytermExtractor?: KeytermExtractor
+  keytermExtractor?: KeytermExtractor,
+  transcriptionCorrector?: TranscriptionCorrector
 ): Promise<ChunkResult> {
   try {
     // Read chunk file into buffer
@@ -520,11 +531,30 @@ async function processChunk(
       }
     }
 
-    // Transcribe the chunk (no correction yet - will be done after deduplication)
+    // Transcribe the chunk
     const result = await chunkProvider.transcribe(chunkInput, config);
 
+    // Apply per-chunk audio verification if enabled and corrector is available
+    let finalText = result.text;
+    if (transcriptionCorrector && config.enableAudioVerification) {
+      try {
+        console.log(`[Audio Verification] Verifying chunk ${chunk.index + 1}/${chunk.total} with audio...`);
+        const correctionResult = await transcriptionCorrector.correctTranscription(finalText, {
+          languageCode: 'el',
+          preserveTimestamps: true,
+          preserveSpeakers: true,
+          audioInput: chunkInput,
+          enableAudioVerification: true,
+        });
+        finalText = correctionResult.correctedText;
+        console.log(`[Audio Verification] Chunk ${chunk.index + 1}: Made ${correctionResult.correctionCount || 0} corrections`);
+      } catch (error) {
+        console.warn(`[Audio Verification] Failed for chunk ${chunk.index + 1}, using original transcription:`, error);
+      }
+    }
+
     return {
-      text: result.text,
+      text: finalText,
       startTime: chunk.startTime,
       endTime: chunk.endTime,
       hasOverlapBefore: chunk.hasOverlapBefore,

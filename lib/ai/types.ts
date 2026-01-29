@@ -48,6 +48,8 @@ export interface TranscriptionConfig {
   enableKeytermExtraction?: boolean;
   /** Enable post-transcription correction to fix context-aware errors (uses Gemini Flash) */
   enableTranscriptionCorrection?: boolean;
+  /** Enable audio-aware correction (corrector listens to audio, more accurate but ~2x cost) */
+  enableAudioVerification?: boolean;
 }
 
 /**
