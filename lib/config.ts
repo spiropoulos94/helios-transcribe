@@ -15,7 +15,7 @@ export const featureFlags = {
  * Pipeline configuration
  */
 export const pipelineConfig = {
-  /** Pipeline mode: 'gemini-only' or 'hybrid' */
+  /** Pipeline mode: 'gemini-only' or 'elevenlabs-only' */
   mode: "gemini-only",
 
   /** Target language for transcription */
