@@ -16,7 +16,7 @@ export const featureFlags = {
  */
 export const pipelineConfig = {
   /** Pipeline mode: 'gemini-only' or 'elevenlabs-only' */
-  mode: "gemini-only",
+  mode: "elevenlabs-only",
 
   /** Target language for transcription */
   targetLanguage: process.env.TARGET_LANGUAGE || 'Greek (Ελληνικά)',
