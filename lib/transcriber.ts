@@ -105,7 +105,7 @@ export class Transcriber {
       text: result.text,
       structuredData: result.structuredData,
       rawResponses: { gemini: result.rawJson },
-      provider: `gemini-${pipelineConfig.geminiModel}`,
+      provider: `${pipelineConfig.geminiModel}`,
       model: pipelineConfig.geminiModel,
     };
   }
