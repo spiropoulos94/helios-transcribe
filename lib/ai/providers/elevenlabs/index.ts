@@ -108,6 +108,7 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
         languageCode: 'el', // ISO-639-1 code for Greek
         diarize: config.enableSpeakerIdentification,
         timestampsGranularity: config.enableTimestamps ? 'word' : 'none',
+        temperature: 0.0,
       });
 
       // Type guard to check if response is a chunk response (not webhook or multichannel)
