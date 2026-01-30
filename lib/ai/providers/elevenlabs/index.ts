@@ -13,7 +13,7 @@ import type {
   StructuredTranscription,
   TranscriptionSegment,
 } from '../../types';
-
+  
 export interface ElevenLabsProviderConfig {
   /** ElevenLabs API key (defaults to ELEVENLABS_API_KEY env var) */
   apiKey?: string;
@@ -195,12 +195,23 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
         return undefined;
       }
 
-      const segments: TranscriptionSegment[] = data.segments.map((segment: any) => ({
-        speaker: segment.speaker || 'Unknown Speaker',
-        startTime: segment.start_time ?? 0,
-        endTime: segment.end_time ?? 0,
-        text: segment.text || '',
-      }));
+      const segments: TranscriptionSegment[] = data.segments.map((segment: any) => {
+        // Extract speaker and timing from the words array
+        const words = segment.words || [];
+        const firstWord = words.find((w: any) => w.type === 'word');
+        const lastWord = words.filter((w: any) => w.type === 'word').pop();
+
+        const speakerId = firstWord?.speaker_id || 'unknown';
+        const startTime = firstWord?.start ?? 0;
+        const endTime = lastWord?.end ?? startTime;
+
+        return {
+          speaker: `Speaker ${speakerId.replace('speaker_', '')}`,
+          startTime,
+          endTime,
+          text: segment.text || '',
+        };
+      });
 
       return { segments };
     } catch (error) {
