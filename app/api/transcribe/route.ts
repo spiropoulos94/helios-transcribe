@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPipeline, type TranscriptionRequest, type PipelineInput } from '@/lib/pipeline';
+import { Transcriber } from '@/lib/transcriber';
 
 /**
  * POST /api/transcribe
  * Transcribe audio from an uploaded file
+ * Configuration comes from environment variables
  */
 export async function POST(request: NextRequest) {
   try {
@@ -15,44 +16,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Get optional configuration from form data
-    const providerType = formData.get('provider') as string || 'elevenlabs';
-    const providerModel = formData.get('model') as string | null;
-    const enableKeytermExtraction = formData.get('enableKeytermExtraction') !== 'false';
-    const enableTranscriptionCorrection = formData.get('enableTranscriptionCorrection') !== 'false';
-    const enableAudioVerification = formData.get('enableAudioVerification') === 'true';
-
-    // Build transcription request
-    const transcriptionRequest: TranscriptionRequest = {
-      provider: {
-        type: providerType as 'elevenlabs' | 'google-gemini' | 'openai',
-        model: providerModel || undefined,
-      },
-      features: {
-        enableKeytermExtraction,
-        enableTranscriptionCorrection,
-        enableAudioVerification,
-      },
-      targetLanguage: 'Greek (Ελληνικά)',
-      enableSpeakerIdentification: true,
-      enableTimestamps: true,
-    };
-
-    // Create pipeline input
-    const pipelineInput: PipelineInput = {
-      source: {
-        type: 'file',
-        buffer: await file.arrayBuffer(),
-        mimeType: file.type,
-        fileName: file.name,
-      },
-      request: transcriptionRequest,
-    };
-
-    // Create and execute pipeline
-    console.log(`[Transcribe] Starting pipeline for: ${file.name}`);
-    const pipeline = createPipeline(transcriptionRequest);
-    const result = await pipeline.execute(pipelineInput);
+    // Transcribe (config from env vars)
+    const transcriber = new Transcriber();
+    const result = await transcriber.transcribe({
+      buffer: await file.arrayBuffer(),
+      mimeType: file.type,
+      fileName: file.name,
+    });
 
     // Wrap result in array for backward compatibility with UI
     return NextResponse.json({

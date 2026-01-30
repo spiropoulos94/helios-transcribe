@@ -18,16 +18,12 @@ export interface ElevenLabsProviderConfig {
   apiKey?: string;
   /** Model to use: 'scribe_v1' or 'scribe_v2' (default: 'scribe_v2') */
   model?: 'scribe_v1' | 'scribe_v2';
-  /** Optional keyterms to improve transcription accuracy (max 100 terms, 50 chars each) */
-  keyterms?: string[];
 }
-
 
 export class ElevenLabsProvider implements AITranscriptionProvider {
   readonly name = 'elevenlabs';
   private readonly client: ElevenLabsClient;
   private readonly model: 'scribe_v1' | 'scribe_v2';
-  private readonly keyterms?: string[];
 
   readonly capabilities: ProviderCapabilities = {
     supportedMimeTypes: [
@@ -58,7 +54,6 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
       apiKey,
     });
     this.model = config.model || 'scribe_v2';
-    this.keyterms = config.keyterms;
 
     if (!apiKey) {
       console.warn('[ElevenLabs] No API key provided. Set ELEVENLABS_API_KEY environment variable.');
@@ -106,15 +101,6 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
       const blob = new Blob([input.buffer], { type: input.mimeType });
       const file = new File([blob], input.fileName, { type: input.mimeType });
 
-      // Validate and prepare keyterms
-      const validKeyterms = this.keyterms
-        ?.filter(term => term.length > 0 && term.length <= 50)
-        .slice(0, 100);
-
-      if (validKeyterms && validKeyterms.length > 0) {
-        console.log(`[ElevenLabs] Using ${validKeyterms.length} keyterms for improved accuracy`);
-      }
-
       // Make API request using the SDK
       const response = await this.client.speechToText.convert({
         modelId: this.model,
@@ -122,7 +108,6 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
         languageCode: 'el', // ISO-639-1 code for Greek
         diarize: config.enableSpeakerIdentification,
         timestampsGranularity: config.enableTimestamps ? 'word' : 'none',
-        keyterms: validKeyterms,
       });
 
       // Type guard to check if response is a chunk response (not webhook or multichannel)
@@ -139,13 +124,6 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
           // Convert word-level data to structured format
           structuredData = this.convertWordsToStructuredOutput(result.words);
           rawJson = JSON.stringify(result);
-
-          // Generate plain text from structured data (if speaker identification enabled)
-          if (config.enableSpeakerIdentification) {
-            text = structuredData.segments
-              .map(seg => `[${seg.timestamp}] ${seg.speaker}: ${seg.content}`)
-              .join('\n\n');
-          }
         }
 
         const processingTimeMs = Date.now() - startTime;
@@ -175,30 +153,21 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
   }
 
   /**
-   * Convert seconds to MM:SS or HH:MM:SS timestamp format
-   */
-  private formatTimestamp(seconds: number): string {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  }
-
-  /**
    * Convert word-level data to structured transcription format
    */
   private convertWordsToStructuredOutput(words: SpeechToTextWordResponseModel[]): StructuredTranscription {
     const segments: TranscriptionSegment[] = [];
     let currentSpeaker: string | null = null;
-    let currentSegment: { words: string[]; startTime: number } = { words: [], startTime: 0 };
+    let currentSegment: { words: string[]; startTime: number; endTime: number } = {
+      words: [],
+      startTime: 0,
+      endTime: 0
+    };
 
     for (const word of words) {
       const speakerId = word.speakerId ?? null;
       const startTime = word.start ?? 0;
+      const endTime = word.end ?? startTime;
 
       // New speaker detected or first word
       if (speakerId !== currentSpeaker && speakerId !== null) {
@@ -206,19 +175,19 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
         if (currentSegment.words.length > 0 && currentSpeaker !== null) {
           segments.push({
             speaker: `Speaker ${currentSpeaker}`,
-            timestamp: this.formatTimestamp(currentSegment.startTime),
-            content: currentSegment.words.join(' '),
-            language: 'Greek',
-            language_code: 'el',
+            startTime: currentSegment.startTime,
+            endTime: currentSegment.endTime,
+            text: currentSegment.words.join(' '),
           });
         }
 
         // Start new segment
         currentSpeaker = speakerId;
-        currentSegment = { words: [word.text], startTime };
+        currentSegment = { words: [word.text], startTime, endTime };
       } else {
-        // Same speaker, add word
+        // Same speaker, add word and update end time
         currentSegment.words.push(word.text);
+        currentSegment.endTime = endTime;
       }
     }
 
@@ -226,15 +195,13 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
     if (currentSegment.words.length > 0 && currentSpeaker !== null) {
       segments.push({
         speaker: `Speaker ${currentSpeaker}`,
-        timestamp: this.formatTimestamp(currentSegment.startTime),
-        content: currentSegment.words.join(' '),
-        language: 'Greek',
-        language_code: 'el',
+        startTime: currentSegment.startTime,
+        endTime: currentSegment.endTime,
+        text: currentSegment.words.join(' '),
       });
     }
 
     return {
-      summary: `Transcription from ElevenLabs with ${segments.length} speaker segment${segments.length !== 1 ? 's' : ''}`,
       segments,
     };
   }

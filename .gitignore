@@ -55,3 +55,6 @@ youtube-*.mp3
 *.mp3
 
 service-account-key.json
+
+sample-gemini
+sample-gemini/*

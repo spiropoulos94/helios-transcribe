@@ -16,8 +16,6 @@ export interface GoogleProviderConfig {
   pollingIntervalMs?: number;
   requestTimeoutMs?: number;
   enableStructuredOutput?: boolean;
-  /** Optional keyterms to improve transcription accuracy (max 100 terms, 50 chars each) */
-  keyterms?: string[];
 }
 
 export class GoogleGeminiProvider implements AITranscriptionProvider {
@@ -45,16 +43,15 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
   };
 
   private client: GoogleGenAI | null = null;
-  private config: Required<Omit<GoogleProviderConfig, 'keyterms'>> & { keyterms?: string[] };
+  private config: Required<GoogleProviderConfig>;
 
   constructor(config?: GoogleProviderConfig) {
     this.config = {
       apiKey: config?.apiKey || aiConfig.GEMINI_API_KEY || '',
-      model: config?.model || process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+      model: config?.model || process.env.GEMINI_MODEL || 'gemini-3-pro-preview',
       pollingIntervalMs: config?.pollingIntervalMs || 2000,
       requestTimeoutMs: config?.requestTimeoutMs || 300000, // 5 minutes default
       enableStructuredOutput: config?.enableStructuredOutput ?? true, // Default: enabled
-      keyterms: config?.keyterms,
     };
 
     if (this.config.apiKey) {
@@ -171,7 +168,6 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
       enableTimestamps: config.enableTimestamps,
       durationSeconds: config.durationSeconds,
       customInstructions: config.customInstructions,
-      keyterms: this.config.keyterms,
     });
 
     // Determine appropriate token limit based on model
@@ -184,9 +180,10 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
         ? 65536
         : 8192;
 
-    // Build generation config
+    // Build generation config following gemini-approach.md specifications
     const generationConfig: any = {
       maxOutputTokens,
+      temperature: 0.0, // Slightly creative for natural transcription
     };
 
     // Add structured output configuration if enabled
@@ -197,6 +194,7 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
         model: this.config.model,
         responseMimeType: generationConfig.responseMimeType,
         hasSchema: !!generationConfig.responseSchema,
+        temperature: generationConfig.temperature,
       });
     }
 
@@ -250,8 +248,12 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
           // Generate plain text from segments for backward compatibility
           const plainText = parsed.segments
             .map(seg => {
-              const prefix = seg.timestamp ? `[${seg.timestamp}] ` : '';
-              return `${prefix}${seg.speaker}: ${seg.content}`;
+              // Convert numeric seconds to MM:SS format
+              const mins = Math.floor(seg.startTime / 60);
+              const secs = Math.floor(seg.startTime % 60);
+              const timestamp = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+              return `[${timestamp}] ${seg.speaker}: ${seg.text}`;
             })
             .join('\n\n');
 
@@ -299,44 +301,40 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
 
   /**
    * Get the JSON schema for structured output
-   * Defines the structure for speaker diarization, timestamps, and emotions
+   * Following gemini-approach.md specifications for speaker diarization and timestamps
+   * Using numeric timestamps (seconds) for better accuracy
    */
   private getStructuredOutputSchema() {
     return {
       type: Type.OBJECT,
       properties: {
-        summary: {
-          type: Type.STRING,
-          description: 'A concise summary of the audio content',
-        },
-        total_speakers: {
-          type: Type.NUMBER,
-          description: 'Total number of distinct speakers identified in the audio',
-        },
         segments: {
           type: Type.ARRAY,
-          description: 'List of transcribed segments with speaker and timestamp. Each segment represents a continuous speech by one speaker.',
           items: {
             type: Type.OBJECT,
             properties: {
               speaker: {
                 type: Type.STRING,
-                description: 'Speaker identifier (e.g., "Speaker 1", "Speaker 2", or "Ομιλητής 1"). Use consistent numbering throughout. If you can infer a name or role from context, include it as "Speaker 1 (name)".',
+                description: 'The name or label of the speaker (e.g., Speaker A, Speaker B).',
               },
-              timestamp: {
-                type: Type.STRING,
-                description: 'Timestamp in MM:SS or HH:MM:SS format indicating when this segment begins',
+              startTime: {
+                type: Type.NUMBER,
+                description: 'The start time of the segment in seconds.',
               },
-              content: {
+              endTime: {
+                type: Type.NUMBER,
+                description: 'The end time of the segment in seconds.',
+              },
+              text: {
                 type: Type.STRING,
-                description: 'The transcribed/translated content for this segment',
+                description: 'The transcribed text.',
               },
             },
-            required: ['speaker', 'timestamp', 'content'],
+            required: ['speaker', 'startTime', 'endTime', 'text'],
           },
         },
       },
-      required: ['summary', 'total_speakers', 'segments'],
+      required: ['segments'],
     };
   }
 
