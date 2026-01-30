@@ -2,6 +2,7 @@ import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import type {
   SpeechToTextChunkResponseModel,
   SpeechToTextWordResponseModel,
+  AdditionalFormatResponseModel,
 } from '@elevenlabs/elevenlabs-js/api';
 import type {
   AITranscriptionProvider,
@@ -101,7 +102,7 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
       const blob = new Blob([input.buffer], { type: input.mimeType });
       const file = new File([blob], input.fileName, { type: input.mimeType });
 
-      // Make API request using the SDK
+      // Make API request using the SDK with segmented_json additional format
       const response = await this.client.speechToText.convert({
         modelId: this.model,
         file,
@@ -109,6 +110,13 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
         diarize: config.enableSpeakerIdentification,
         timestampsGranularity: config.enableTimestamps ? 'word' : 'none',
         temperature: 0.0,
+        additionalFormats: [
+          {
+            format: 'segmented_json',
+            includeSpeakers: config.enableSpeakerIdentification,
+            includeTimestamps: config.enableTimestamps ?? true,
+          },
+        ],
       });
 
       // Type guard to check if response is a chunk response (not webhook or multichannel)
@@ -120,9 +128,22 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
         let structuredData: StructuredTranscription | undefined;
         let rawJson: string | undefined;
 
-        // If word-level data is available, create structured output
-        if (result.words && result.words.length > 0) {
-          // Convert word-level data to structured format
+        // Try to use segmented_json format first, then fall back to word-level conversion
+        if (result.additionalFormats && result.additionalFormats.length > 0) {
+          const segmentedJson = result.additionalFormats.find(
+            (format) => format?.requestedFormat === 'segmented_json'
+          );
+
+          if (segmentedJson) {
+            console.log('[ElevenLabs] Using segmented_json format from API');
+            structuredData = this.convertSegmentedJsonToStructuredOutput(segmentedJson);
+            rawJson = segmentedJson.content;
+          }
+        }
+
+        // Fallback: If segmented_json not available, use word-level data
+        if (!structuredData && result.words && result.words.length > 0) {
+          console.log('[ElevenLabs] Falling back to word-level conversion');
           structuredData = this.convertWordsToStructuredOutput(result.words);
           rawJson = JSON.stringify(result);
         }
@@ -150,6 +171,41 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
       throw new Error(
         `ElevenLabs transcription failed: ${error instanceof Error ? error.message : String(error)}`
       );
+    }
+  }
+
+  /**
+   * Convert segmented_json format to structured transcription format
+   */
+  private convertSegmentedJsonToStructuredOutput(
+    format: AdditionalFormatResponseModel
+  ): StructuredTranscription | undefined {
+    try {
+      // Decode base64 if needed
+      let jsonContent = format.content;
+      if (format.isBase64Encoded) {
+        jsonContent = Buffer.from(format.content, 'base64').toString('utf-8');
+      }
+
+      const data = JSON.parse(jsonContent);
+
+      // ElevenLabs segmented_json format has a 'segments' array
+      if (!data.segments || !Array.isArray(data.segments)) {
+        console.warn('[ElevenLabs] Invalid segmented_json format: missing segments array');
+        return undefined;
+      }
+
+      const segments: TranscriptionSegment[] = data.segments.map((segment: any) => ({
+        speaker: segment.speaker || 'Unknown Speaker',
+        startTime: segment.start_time ?? 0,
+        endTime: segment.end_time ?? 0,
+        text: segment.text || '',
+      }));
+
+      return { segments };
+    } catch (error) {
+      console.error('[ElevenLabs] Failed to parse segmented_json:', error);
+      return undefined;
     }
   }
 
