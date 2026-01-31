@@ -205,8 +205,12 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
         const startTime = firstWord?.start ?? 0;
         const endTime = lastWord?.end ?? startTime;
 
+        // Convert speaker ID to number and add 1 to start from Speaker 1
+        const speakerNumber = speakerId.replace('speaker_', '');
+        const displayNumber = isNaN(Number(speakerNumber)) ? speakerNumber : String(Number(speakerNumber) + 1);
+
         return {
-          speaker: `Speaker ${speakerId.replace('speaker_', '')}`,
+          speaker: `Speaker ${displayNumber}`,
           startTime,
           endTime,
           text: segment.text || '',
@@ -241,8 +245,10 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
       if (speakerId !== currentSpeaker && speakerId !== null) {
         // Flush current segment if it has content
         if (currentSegment.words.length > 0 && currentSpeaker !== null) {
+          // Convert speaker ID to number and add 1 to start from Speaker 1
+          const speakerNumber = isNaN(Number(currentSpeaker)) ? currentSpeaker : String(Number(currentSpeaker) + 1);
           segments.push({
-            speaker: `Speaker ${currentSpeaker}`,
+            speaker: `Speaker ${speakerNumber}`,
             startTime: currentSegment.startTime,
             endTime: currentSegment.endTime,
             text: currentSegment.words.join(' '),
@@ -261,8 +267,10 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
 
     // Flush final segment
     if (currentSegment.words.length > 0 && currentSpeaker !== null) {
+      // Convert speaker ID to number and add 1 to start from Speaker 1
+      const speakerNumber = isNaN(Number(currentSpeaker)) ? currentSpeaker : String(Number(currentSpeaker) + 1);
       segments.push({
-        speaker: `Speaker ${currentSpeaker}`,
+        speaker: `Speaker ${speakerNumber}`,
         startTime: currentSegment.startTime,
         endTime: currentSegment.endTime,
         text: currentSegment.words.join(' '),

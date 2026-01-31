@@ -1,6 +1,28 @@
 import { StructuredTranscription } from './ai/types';
 
 /**
+ * Segment approval status for editor workflow
+ */
+export interface SegmentApproval {
+  segmentIndex: number;
+  approved: boolean;
+  editedText?: string;  // If user edits the segment text
+  editedAt?: number;    // Timestamp of when edit was made
+}
+
+/**
+ * Transcription editor state for segment approval workflow
+ */
+export interface TranscriptionEditorState {
+  approvals: SegmentApproval[];
+  isDraft: boolean;       // false when finalized
+  finalizedAt?: number;   // Timestamp when finalized
+  audioFileId?: string;   // Reference to IndexedDB audio file
+  audioFileName?: string;
+  audioDuration?: number;
+}
+
+/**
  * Saved transcription with metadata
  */
 export interface SavedTranscription {
@@ -27,6 +49,8 @@ export interface SavedTranscription {
     structuredData?: StructuredTranscription;
     /** Raw JSON response from the provider (when structured output is used) */
     rawJson?: string;
+    /** Editor state for segment approval workflow */
+    editorState?: TranscriptionEditorState;
   };
 }
 
@@ -169,4 +193,34 @@ export function saveMultiModelTranscriptions(
  */
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * Update transcription editor state
+ * @param id - Transcription ID
+ * @param editorState - New editor state
+ */
+export function updateTranscriptionEditorState(
+  id: string,
+  editorState: TranscriptionEditorState
+): void {
+  const transcriptions = getSavedTranscriptions();
+  const updated = transcriptions.map((t) => {
+    if (t.id === id) {
+      return {
+        ...t,
+        metadata: {
+          ...t.metadata,
+          editorState,
+        },
+      };
+    }
+    return t;
+  });
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  } catch (error) {
+    console.error('Error updating transcription editor state:', error);
+  }
 }

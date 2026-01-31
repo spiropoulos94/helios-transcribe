@@ -21,6 +21,7 @@ import {
 import { SavedTranscription, getTranscriptionById, deleteTranscription, getSavedTranscriptions } from '@/lib/storage';
 import { calculateTranscriptionCost } from '@/lib/pricing/calculator';
 import { type Locale } from '@/i18n/config';
+import TranscriptionEditor from './editor/TranscriptionEditor';
 
 interface LibraryDetailClientProps {
   translations: any;
@@ -85,7 +86,7 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
   };
 
   const handleDelete = () => {
-    if (transcription && window.confirm(t.confirmDelete)) {
+    if (transcription && window.confirm(t.libraryDetail?.confirmDelete)) {
       setIsDeleting(true);
       deleteTranscription(transcription.id);
       router.push(`/${lang}/library`);
@@ -143,7 +144,7 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
   if (isLoading) {
     return (
       <div className="flex-1 bg-linear-to-br from-slate-50 via-blue-50/30 to-slate-100 flex items-center justify-center">
-        <div className="text-slate-600">{t.loading}</div>
+        <div className="text-slate-600">{t.libraryDetail?.loading}</div>
       </div>
     );
   }
@@ -156,16 +157,16 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
             <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <AlertTriangle className="w-10 h-10 text-red-600" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-3">{t.notFoundTitle}</h1>
+            <h1 className="text-3xl font-bold text-slate-900 mb-3">{t.libraryDetail?.notFoundTitle}</h1>
             <p className="text-slate-600 mb-8 max-w-md mx-auto">
-              {t.notFoundDescription}
+              {t.libraryDetail?.notFoundDescription}
             </p>
             <Link
               href={`/${lang}/library`}
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
-              {t.backToLibrary}
+              {t.libraryDetail?.backToLibrary}
             </Link>
           </div>
         </main>
@@ -173,6 +174,16 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
     );
   }
 
+  // Check if transcription has structured data for new editor
+  const hasStructuredData = transcription.metadata?.structuredData?.segments &&
+                            transcription.metadata.structuredData.segments.length > 0;
+
+  // Use new editor if structured data is available
+  if (hasStructuredData) {
+    return <TranscriptionEditor transcription={transcription} lang={lang} translations={t} />;
+  }
+
+  // Otherwise show legacy view
   return (
     <div className="flex-1 bg-linear-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -184,7 +195,7 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
             className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            {t.backToLibrary}
+            {t.libraryDetail?.backToLibrary}
           </Link>
 
           {/* Next/Prev Navigation */}
@@ -195,7 +206,7 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
                 className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">{t.previous}</span>
+                <span className="hidden sm:inline">{t.libraryDetail?.previous}</span>
               </Link>
             ) : (
               <button
@@ -203,7 +214,7 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
                 className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-300 cursor-not-allowed rounded-lg"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">{t.previous}</span>
+                <span className="hidden sm:inline">{t.libraryDetail?.previous}</span>
               </button>
             )}
 
@@ -212,7 +223,7 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
                 href={`/${lang}/library/${nextId}`}
                 className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                <span className="hidden sm:inline">{t.next}</span>
+                <span className="hidden sm:inline">{t.libraryDetail?.next}</span>
                 <ChevronRight className="w-4 h-4" />
               </Link>
             ) : (
@@ -220,7 +231,7 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
                 disabled
                 className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-300 cursor-not-allowed rounded-lg"
               >
-                <span className="hidden sm:inline">{t.next}</span>
+                <span className="hidden sm:inline">{t.libraryDetail?.next}</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             )}
@@ -255,7 +266,7 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
                     {transcription.metadata?.wordCount && (
                       <div className="flex items-center gap-2">
                         <Hash className="w-4 h-4" />
-                        <span>{transcription.metadata.wordCount} {t.wordCount}</span>
+                        <span>{transcription.metadata.wordCount} {t.libraryDetail?.wordCount}</span>
                       </div>
                     )}
                     {transcription.metadata?.processingTimeMs && (
@@ -283,29 +294,29 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
                 <button
                   onClick={handleCopy}
                   className="p-3 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
-                  title={t.copy}
+                  title={t.libraryDetail?.copy}
                   disabled={isDeleting}
                 >
                   {copied ? <CheckCircle2 className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                  <span className="hidden lg:inline">{copied ? 'Copied!' : t.copy}</span>
+                  <span className="hidden lg:inline">{copied ? 'Copied!' : t.libraryDetail?.copy}</span>
                 </button>
                 <button
                   onClick={handleDownload}
                   className="p-3 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
-                  title={t.download}
+                  title={t.libraryDetail?.download}
                   disabled={isDeleting}
                 >
                   <Download className="w-5 h-5" />
-                  <span className="hidden lg:inline">{t.download}</span>
+                  <span className="hidden lg:inline">{t.libraryDetail?.download}</span>
                 </button>
                 <button
                   onClick={handleDelete}
                   className="p-3 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
-                  title={t.delete}
+                  title={t.libraryDetail?.delete}
                   disabled={isDeleting}
                 >
                   <Trash2 className="w-5 h-5" />
-                  <span className="hidden lg:inline">{isDeleting ? 'Deleting...' : t.delete}</span>
+                  <span className="hidden lg:inline">{isDeleting ? 'Deleting...' : t.libraryDetail?.delete}</span>
                 </button>
               </div>
             </div>

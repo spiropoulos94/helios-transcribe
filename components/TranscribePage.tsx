@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { InputSection } from '@/components/InputSection';
 import { TranscriptView } from '@/components/TranscriptView';
 import { AppStatus, TranscriptionResult, UploadConfig } from '@/types';
-import { saveMultiModelTranscriptions } from '@/lib/storage';
+import { saveMultiModelTranscriptions, updateTranscriptionEditorState } from '@/lib/storage';
+import { saveAudioFile } from '@/lib/audioStorage';
 import { Loader2, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import { type Locale } from '@/i18n/config';
 
@@ -80,7 +81,30 @@ export default function TranscribePage({ translations, lang }: TranscribePagePro
         setStatus(AppStatus.COMPLETED);
 
         // Save all transcriptions with multi-model support
-        saveMultiModelTranscriptions(data.results);
+        const savedTranscriptions = saveMultiModelTranscriptions(data.results);
+
+        // Save audio file to IndexedDB and link it to transcriptions
+        if (config.file) {
+          try {
+            const audioFileId = await saveAudioFile(config.file, undefined, config.file.name);
+
+            // Update each saved transcription with audio file reference
+            savedTranscriptions.forEach((transcription) => {
+              updateTranscriptionEditorState(transcription.id, {
+                approvals: transcription.metadata?.structuredData?.segments.map((_, index) => ({
+                  segmentIndex: index,
+                  approved: false,
+                })) || [],
+                isDraft: true,
+                audioFileId,
+                audioFileName: config.file!.name,
+                audioDuration: transcription.metadata?.audioDurationSeconds,
+              });
+            });
+          } catch (err) {
+            console.error('Failed to save audio file:', err);
+          }
+        }
       } catch (err: unknown) {
         console.error(err);
         const message = err instanceof Error ? err.message : 'An unexpected error occurred.';

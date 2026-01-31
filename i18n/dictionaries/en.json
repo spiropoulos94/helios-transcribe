@@ -193,5 +193,26 @@
     "words": "words",
     "models": "models",
     "succeeded": "succeeded"
+  },
+  "editor": {
+    "draft": "Draft",
+    "finalized": "Finalized",
+    "segmentsApproved": "segments approved",
+    "finalizeTranscription": "Finalize Transcription",
+    "export": "Export",
+    "approve": "Approve",
+    "approved": "Approved",
+    "edit": "Edit",
+    "edited": "Edited",
+    "save": "Save",
+    "cancel": "Cancel",
+    "speakers": "Speakers",
+    "noAudioFile": "No audio file available",
+    "noAudioDescription": "This transcription doesn't have an associated audio file",
+    "loadingAudio": "Loading audio...",
+    "errorLoadingAudio": "Error loading audio",
+    "speed": "Speed",
+    "finalizeSuccess": "Transcription finalized successfully!",
+    "clickToJump": "Click to jump to this timestamp"
   }
 }

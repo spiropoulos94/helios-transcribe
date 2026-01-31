@@ -70,6 +70,28 @@
   }
 }
 
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: currentColor;
+    opacity: 1;
+  }
+  50% {
+    border-color: transparent;
+    opacity: 0.6;
+  }
+}
+
+@keyframes slide-in-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 .animate-in {
   animation-duration: 0.5s;
   animation-fill-mode: both;
@@ -101,4 +123,8 @@
 
 .duration-700 {
   animation-duration: 0.7s;
+}
+
+.playing-segment {
+  animation: pulse-border 2s ease-in-out infinite;
 }

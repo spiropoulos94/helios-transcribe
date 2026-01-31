@@ -10,5 +10,5 @@ export default async function LibraryDetailPage({
   const { lang, id } = await params;
   const dict = await getDictionary(lang);
 
-  return <LibraryDetailClient translations={dict.libraryDetail} lang={lang} id={id} />;
+  return <LibraryDetailClient translations={dict} lang={lang} id={id} />;
 }

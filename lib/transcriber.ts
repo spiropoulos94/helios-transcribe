@@ -52,7 +52,8 @@ export class Transcriber {
     console.log(`[Transcriber] Mode: ${pipelineConfig.mode}`);
 
     // Execute transcription based on configured mode
-    const result = pipelineConfig.mode === 'gemini-only'
+    const mode = pipelineConfig.mode as PipelineMode;
+    const result = mode === 'gemini-only'
       ? await this.transcribeGeminiOnly(input)
       : await this.transcribeElevenLabsOnly(input);
 
