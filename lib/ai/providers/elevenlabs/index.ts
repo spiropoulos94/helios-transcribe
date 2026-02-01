@@ -2,7 +2,6 @@ import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import type {
   SpeechToTextChunkResponseModel,
   SpeechToTextWordResponseModel,
-  AdditionalFormatResponseModel,
 } from '@elevenlabs/elevenlabs-js/api';
 import type {
   AITranscriptionProvider,
@@ -13,18 +12,27 @@ import type {
   StructuredTranscription,
   TranscriptionSegment,
 } from '../../types';
+import { transcriptionStore } from '../../../transcription-store';
   
 export interface ElevenLabsProviderConfig {
   /** ElevenLabs API key (defaults to ELEVENLABS_API_KEY env var) */
   apiKey?: string;
   /** Model to use: 'scribe_v1' or 'scribe_v2' (default: 'scribe_v2') */
   model?: 'scribe_v1' | 'scribe_v2';
+  /** Timeout in milliseconds for API requests (default: 3600000 = 60 minutes) */
+  timeoutMs?: number;
+  /** Use async mode with polling instead of synchronous (default: true) */
+  useAsyncMode?: boolean;
+  /** Polling interval in milliseconds when using async mode (default: 2000 = 2 seconds) */
+  pollingIntervalMs?: number;
 }
 
 export class ElevenLabsProvider implements AITranscriptionProvider {
   readonly name = 'elevenlabs';
   private readonly client: ElevenLabsClient;
   private readonly model: 'scribe_v1' | 'scribe_v2';
+  private readonly useAsyncMode: boolean;
+  private readonly pollingIntervalMs: number;
 
   readonly capabilities: ProviderCapabilities = {
     supportedMimeTypes: [
@@ -50,11 +58,17 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
 
   constructor(config: ElevenLabsProviderConfig = {}) {
     const apiKey = config.apiKey || process.env.ELEVENLABS_API_KEY;
+    const timeoutMs = config.timeoutMs ?? 3600000; // Default 60 minutes (1 hour)
 
     this.client = new ElevenLabsClient({
       apiKey,
+      timeoutInSeconds: Math.floor(timeoutMs / 1000),
     });
     this.model = config.model || 'scribe_v2';
+    // Default to async mode with webhooks for handling large files without timeouts
+    // Requires webhook configuration in ElevenLabs account settings
+    this.useAsyncMode = config.useAsyncMode ?? true;
+    this.pollingIntervalMs = config.pollingIntervalMs ?? 2000; // Default 2 seconds
 
     if (!apiKey) {
       console.warn('[ElevenLabs] No API key provided. Set ELEVENLABS_API_KEY environment variable.');
@@ -102,22 +116,10 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
       const blob = new Blob([input.buffer], { type: input.mimeType });
       const file = new File([blob], input.fileName, { type: input.mimeType });
 
-      // Make API request using the SDK with segmented_json additional format
-      const response = await this.client.speechToText.convert({
-        modelId: this.model,
-        file,
-        languageCode: 'el', // ISO-639-1 code for Greek
-        diarize: config.enableSpeakerIdentification,
-        timestampsGranularity: config.enableTimestamps ? 'word' : 'none',
-        temperature: 0.0,
-        additionalFormats: [
-          {
-            format: 'segmented_json',
-            includeSpeakers: config.enableSpeakerIdentification,
-            includeTimestamps: config.enableTimestamps ?? true,
-          },
-        ],
-      });
+      // Use async mode with polling or synchronous mode
+      const response = this.useAsyncMode
+        ? await this.transcribeAsync(file, config)
+        : await this.transcribeSync(file, config);
 
       // Type guard to check if response is a chunk response (not webhook or multichannel)
       if ('text' in response && 'words' in response) {
@@ -128,10 +130,21 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
         let structuredData: StructuredTranscription | undefined;
         let rawJson: string | undefined;
 
+        // Handle both camelCase (from SDK) and snake_case (from webhook)
+        const formats = (result as any).additionalFormats || (result as any).additional_formats;
+
+        console.log('[ElevenLabs] Result has additionalFormats:', !!(result as any).additionalFormats);
+        console.log('[ElevenLabs] Result has additional_formats:', !!(result as any).additional_formats);
+        console.log('[ElevenLabs] Result has words:', !!result.words);
+        if (formats) {
+          console.log('[ElevenLabs] formats length:', formats.length);
+        }
+
         // Try to use segmented_json format first, then fall back to word-level conversion
-        if (result.additionalFormats && result.additionalFormats.length > 0) {
-          const segmentedJson = result.additionalFormats.find(
-            (format) => format?.requestedFormat === 'segmented_json'
+        if (formats && formats.length > 0) {
+          const segmentedJson = formats.find(
+            (format: any) => format?.requestedFormat === 'segmented_json' ||
+                            format?.requested_format === 'segmented_json'
           );
 
           if (segmentedJson) {
@@ -175,15 +188,149 @@ export class ElevenLabsProvider implements AITranscriptionProvider {
   }
 
   /**
+   * Synchronous transcription - waits for the entire transcription to complete
+   */
+  private async transcribeSync(
+    file: File,
+    config: TranscriptionConfig
+  ): Promise<SpeechToTextChunkResponseModel> {
+    console.log('[ElevenLabs] Using synchronous mode');
+
+    const response = await this.client.speechToText.convert({
+      modelId: this.model,
+      file,
+      languageCode: 'el', // ISO-639-1 code for Greek
+      diarize: config.enableSpeakerIdentification,
+      timestampsGranularity: config.enableTimestamps ? 'word' : 'none',
+      temperature: 0.0,
+      additionalFormats: [
+        {
+          format: 'segmented_json',
+          includeSpeakers: config.enableSpeakerIdentification,
+          includeTimestamps: config.enableTimestamps ?? true,
+        },
+      ],
+    });
+
+    // Type guard to check if response is a chunk response
+    if ('text' in response && 'words' in response) {
+      return response as SpeechToTextChunkResponseModel;
+    }
+
+    throw new Error('Unexpected response format from ElevenLabs API');
+  }
+
+  /**
+   * Asynchronous transcription - submits job and polls for completion via webhook
+   */
+  private async transcribeAsync(
+    file: File,
+    config: TranscriptionConfig
+  ): Promise<SpeechToTextChunkResponseModel> {
+    console.log('[ElevenLabs] Using async mode with webhook');
+
+    // Submit transcription job with webhook enabled
+    const submitResponse = await this.client.speechToText.convert({
+      modelId: this.model,
+      file,
+      languageCode: 'el', // ISO-639-1 code for Greek
+      diarize: config.enableSpeakerIdentification,
+      timestampsGranularity: config.enableTimestamps ? 'word' : 'none',
+      temperature: 0.0,
+      webhook: true, // Enable async mode - will POST to configured webhook
+      additionalFormats: [
+        {
+          format: 'segmented_json',
+          includeSpeakers: config.enableSpeakerIdentification,
+          includeTimestamps: config.enableTimestamps ?? true,
+        },
+      ],
+    });
+
+    // Type guard to check if this is a webhook response with request_id
+    if ('requestId' in submitResponse && submitResponse.requestId) {
+      const requestId = submitResponse.requestId;
+      const normalizedId = this.normalizeRequestId(requestId);
+
+      console.log(`[ElevenLabs] Job submitted with request ID: ${requestId}`);
+      console.log(`[ElevenLabs] Normalized ID for storage: ${normalizedId}`);
+      console.log('[ElevenLabs] Waiting for webhook callback...');
+
+      // Store the pending transcription with normalized ID
+      transcriptionStore.create(normalizedId);
+      transcriptionStore.updateStatus(normalizedId, 'processing');
+
+      // Poll the store for webhook result using normalized ID
+      return await this.pollForWebhookResult(normalizedId);
+    }
+
+    throw new Error('Failed to get request ID from async submission');
+  }
+
+  /**
+   * Poll for webhook result from transcription store
+   */
+  private async pollForWebhookResult(
+    requestId: string
+  ): Promise<SpeechToTextChunkResponseModel> {
+    let attempts = 0;
+    const maxAttempts = 1800; // 60 minutes (1 hour) with 2-second intervals
+
+    while (attempts < maxAttempts) {
+      // Check the store for the result
+      const stored = transcriptionStore.get(requestId);
+
+      if (stored?.status === 'completed' && stored.result) {
+        console.log(`[ElevenLabs] Webhook result received after ${attempts + 1} polling attempts`);
+
+        // Extract the transcription from the webhook payload
+        const { transcription } = stored.result;
+
+        // Convert webhook transcription format to SpeechToTextChunkResponseModel
+        return transcription as SpeechToTextChunkResponseModel;
+      }
+
+      if (stored?.status === 'failed') {
+        throw new Error(`Transcription failed: ${stored.error || 'Unknown error'}`);
+      }
+
+      // If not ready yet, wait and retry
+      attempts++;
+      if (attempts % 10 === 0) {
+        console.log(`[ElevenLabs] Still waiting for webhook... (${attempts} attempts)`);
+      }
+      await this.sleep(this.pollingIntervalMs);
+    }
+
+    throw new Error(`Webhook polling timed out after ${maxAttempts} attempts (${maxAttempts * this.pollingIntervalMs / 1000}s)`);
+  }
+
+  /**
+   * Sleep utility for polling
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Normalize request ID for consistent storage lookup
+   * Converts to lowercase to handle SDK/webhook casing differences
+   */
+  private normalizeRequestId(requestId: string): string {
+    return requestId.toLowerCase();
+  }
+
+  /**
    * Convert segmented_json format to structured transcription format
    */
   private convertSegmentedJsonToStructuredOutput(
-    format: AdditionalFormatResponseModel
+    format: any
   ): StructuredTranscription | undefined {
     try {
       // Decode base64 if needed
+      const isEncoded = format.isBase64Encoded || format.is_base64_encoded;
       let jsonContent = format.content;
-      if (format.isBase64Encoded) {
+      if (isEncoded) {
         jsonContent = Buffer.from(format.content, 'base64').toString('utf-8');
       }
 

@@ -140,6 +140,7 @@ export class Transcriber {
 
     const provider = new ElevenLabsProvider({
       model: pipelineConfig.elevenLabsModel,
+      timeoutMs: 2 * 60 * 60 * 1000, // 2 hours for very long audio files
     });
 
     const result = await provider.transcribe(transcriptionInput, {
