@@ -18,7 +18,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { SavedTranscription, getTranscriptionById, deleteTranscription, getSavedTranscriptions } from '@/lib/storage';
+import { SavedTranscription, getTranscriptionById, deleteTranscription, getSavedTranscriptions } from '@/lib/transcriptionStorage';
 import { calculateTranscriptionCost } from '@/lib/pricing/calculator';
 import { type Locale } from '@/i18n/config';
 import TranscriptionEditor from './editor/TranscriptionEditor';
@@ -42,25 +42,28 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
   console.log(transcription);
 
   useEffect(() => {
-    if (id) {
-      const data = getTranscriptionById(id);
-      setTranscription(data);
-      setIsLoading(false);
+    const loadData = async () => {
+      if (id) {
+        const data = await getTranscriptionById(id);
+        setTranscription(data);
+        setIsLoading(false);
 
-      // Get all transcriptions to find prev/next
-      const allTranscriptions = getSavedTranscriptions();
-      const currentIndex = allTranscriptions.findIndex((t) => t.id === id);
+        // Get all transcriptions to find prev/next
+        const allTranscriptions = await getSavedTranscriptions();
+        const currentIndex = allTranscriptions.findIndex((t) => t.id === id);
 
-      if (currentIndex !== -1) {
-        // Previous item (newer) is at currentIndex - 1
-        setPreviousId(currentIndex > 0 ? allTranscriptions[currentIndex - 1].id : null);
-        // Next item (older) is at currentIndex + 1
-        setNextId(currentIndex < allTranscriptions.length - 1 ? allTranscriptions[currentIndex + 1].id : null);
-      } else {
-        setPreviousId(null);
-        setNextId(null);
+        if (currentIndex !== -1) {
+          // Previous item (newer) is at currentIndex - 1
+          setPreviousId(currentIndex > 0 ? allTranscriptions[currentIndex - 1].id : null);
+          // Next item (older) is at currentIndex + 1
+          setNextId(currentIndex < allTranscriptions.length - 1 ? allTranscriptions[currentIndex + 1].id : null);
+        } else {
+          setPreviousId(null);
+          setNextId(null);
+        }
       }
-    }
+    };
+    loadData();
   }, [id]);
 
   const handleCopy = () => {
@@ -85,10 +88,10 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (transcription && window.confirm(t.libraryDetail?.confirmDelete)) {
       setIsDeleting(true);
-      deleteTranscription(transcription.id);
+      await deleteTranscription(transcription.id);
       router.push(`/${lang}/library`);
     }
   };

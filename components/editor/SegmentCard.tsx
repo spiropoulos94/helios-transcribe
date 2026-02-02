@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Check, Edit2, X, Save } from 'lucide-react';
 import { TranscriptionSegment } from '@/lib/ai/types';
-import { SegmentApproval } from '@/lib/storage';
+import { SegmentApproval } from '@/lib/transcriptionStorage';
 import { ColorScheme, formatTimestamp } from '@/lib/editor/speakerColors';
 
 interface SegmentCardProps {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { FileText, Download, Trash2, ChevronDown, ChevronUp, Copy, CheckCircle2, ArrowRight } from 'lucide-react';
-import { SavedTranscription } from '@/lib/storage';
+import { SavedTranscription } from '@/lib/transcriptionStorage';
 import { formatDuration, formatProcessingTime } from '@/lib/utils/format';
 import { calculateTranscriptionCost } from '@/lib/pricing/calculator';
 import { type Locale } from '@/i18n/config';

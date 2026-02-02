@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { History, Trash2, FileText } from 'lucide-react';
 import { TranscriptionCard } from '@/components/TranscriptionCard';
-import { SavedTranscription, getSavedTranscriptions, deleteTranscription, clearAllTranscriptions } from '@/lib/storage';
+import { SavedTranscription, getSavedTranscriptions, deleteTranscription, clearAllTranscriptions, migrateFromLocalStorage } from '@/lib/transcriptionStorage';
 import Link from 'next/link';
 import { type Locale } from '@/i18n/config';
 
@@ -17,25 +17,32 @@ export default function LibraryPageClient({ translations: t, lang }: LibraryPage
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadTranscriptions();
+    initializeAndLoad();
   }, []);
 
-  const loadTranscriptions = () => {
+  const initializeAndLoad = async () => {
     setIsLoading(true);
-    const saved = getSavedTranscriptions();
+    // Migrate any existing localStorage data to IndexedDB (one-time)
+    await migrateFromLocalStorage();
+    await loadTranscriptions();
+  };
+
+  const loadTranscriptions = async () => {
+    setIsLoading(true);
+    const saved = await getSavedTranscriptions();
     setTranscriptions(saved);
     setIsLoading(false);
   };
 
-  const handleDelete = (id: string) => {
-    deleteTranscription(id);
-    loadTranscriptions();
+  const handleDelete = async (id: string) => {
+    await deleteTranscription(id);
+    await loadTranscriptions();
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (window.confirm('Are you sure you want to delete all saved transcriptions? This action cannot be undone.')) {
-      clearAllTranscriptions();
-      loadTranscriptions();
+      await clearAllTranscriptions();
+      await loadTranscriptions();
     }
   };
 

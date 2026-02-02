@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { InputSection } from '@/components/InputSection';
 import { TranscriptView } from '@/components/TranscriptView';
 import { AppStatus, TranscriptionResult, UploadConfig } from '@/types';
-import { saveMultiModelTranscriptions, updateTranscriptionEditorState } from '@/lib/storage';
+import { saveMultiModelTranscriptions, updateTranscriptionEditorState } from '@/lib/transcriptionStorage';
 import { saveAudioFile } from '@/lib/audioStorage';
 import { Loader2, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import { type Locale } from '@/i18n/config';
@@ -46,8 +46,8 @@ export default function TranscribePage({ translations, lang }: TranscribePagePro
         setResults(data.results);
         setStatus(AppStatus.COMPLETED);
 
-        // Save all transcriptions with multi-model support
-        saveMultiModelTranscriptions(data.results);
+        // Save all transcriptions with multi-model support (using IndexedDB)
+        await saveMultiModelTranscriptions(data.results);
       } catch (err: unknown) {
         console.error('YouTube Processing Error:', err);
         const message = err instanceof Error ? err.message : 'Failed to process YouTube video. Please try again.';
@@ -80,8 +80,8 @@ export default function TranscribePage({ translations, lang }: TranscribePagePro
         setResults(data.results);
         setStatus(AppStatus.COMPLETED);
 
-        // Save all transcriptions with multi-model support
-        const savedTranscriptions = saveMultiModelTranscriptions(data.results);
+        // Save all transcriptions with multi-model support (using IndexedDB)
+        const savedTranscriptions = await saveMultiModelTranscriptions(data.results);
 
         // Save audio file to IndexedDB and link it to transcriptions
         if (config.file) {
@@ -89,8 +89,8 @@ export default function TranscribePage({ translations, lang }: TranscribePagePro
             const audioFileId = await saveAudioFile(config.file, undefined, config.file.name);
 
             // Update each saved transcription with audio file reference
-            savedTranscriptions.forEach((transcription) => {
-              updateTranscriptionEditorState(transcription.id, {
+            for (const transcription of savedTranscriptions) {
+              await updateTranscriptionEditorState(transcription.id, {
                 approvals: transcription.metadata?.structuredData?.segments.map((_, index) => ({
                   segmentIndex: index,
                   approved: false,
@@ -100,7 +100,7 @@ export default function TranscribePage({ translations, lang }: TranscribePagePro
                 audioFileName: config.file!.name,
                 audioDuration: transcription.metadata?.audioDurationSeconds,
               });
-            });
+            }
           } catch (err) {
             console.error('Failed to save audio file:', err);
           }

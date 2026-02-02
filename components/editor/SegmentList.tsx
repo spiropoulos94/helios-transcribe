@@ -1,7 +1,7 @@
 'use client';
 
 import { TranscriptionSegment } from '@/lib/ai/types';
-import { SegmentApproval } from '@/lib/storage';
+import { SegmentApproval } from '@/lib/transcriptionStorage';
 import { getSpeakerColor } from '@/lib/editor/speakerColors';
 import SegmentCard from './SegmentCard';
 

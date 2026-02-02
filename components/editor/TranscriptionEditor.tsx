@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { SavedTranscription, TranscriptionEditorState, updateTranscriptionEditorState, getSavedTranscriptions } from '@/lib/storage';
+import { SavedTranscription, TranscriptionEditorState, updateTranscriptionEditorState, getSavedTranscriptions } from '@/lib/transcriptionStorage';
 import { TranscriptionSegment } from '@/lib/ai/types';
 import { type Locale } from '@/i18n/config';
 import EditorHeader from './EditorHeader';
@@ -34,19 +34,22 @@ export default function TranscriptionEditor({
 
   // Get prev/next transcription IDs
   useEffect(() => {
-    const allTranscriptions = getSavedTranscriptions();
-    const currentIndex = allTranscriptions.findIndex((t) => t.id === transcription.id);
+    const loadNavigation = async () => {
+      const allTranscriptions = await getSavedTranscriptions();
+      const currentIndex = allTranscriptions.findIndex((t) => t.id === transcription.id);
 
-    if (currentIndex !== -1) {
-      setPreviousId(currentIndex > 0 ? allTranscriptions[currentIndex - 1].id : null);
-      setNextId(currentIndex < allTranscriptions.length - 1 ? allTranscriptions[currentIndex + 1].id : null);
-    }
+      if (currentIndex !== -1) {
+        setPreviousId(currentIndex > 0 ? allTranscriptions[currentIndex - 1].id : null);
+        setNextId(currentIndex < allTranscriptions.length - 1 ? allTranscriptions[currentIndex + 1].id : null);
+      }
+    };
+    loadNavigation();
   }, [transcription.id]);
 
-  // Auto-save editor state to localStorage (debounced)
+  // Auto-save editor state to IndexedDB (debounced)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      updateTranscriptionEditorState(transcription.id, editorState);
+      updateTranscriptionEditorState(transcription.id, editorState).catch(console.error);
     }, 500);
 
     return () => clearTimeout(timeoutId);

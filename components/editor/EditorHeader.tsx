@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Trash2, CheckCircle } from 'lucide-react';
-import { SavedTranscription, deleteTranscription } from '@/lib/storage';
-import { TranscriptionEditorState } from '@/lib/storage';
+import { SavedTranscription, deleteTranscription, TranscriptionEditorState } from '@/lib/transcriptionStorage';
 import { type Locale } from '@/i18n/config';
 
 interface EditorHeaderProps {
@@ -34,9 +33,9 @@ export default function EditorHeader({
 }: EditorHeaderProps) {
   const router = useRouter();
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm(t.libraryDetail?.confirmDelete || 'Are you sure you want to delete this transcription?')) {
-      deleteTranscription(transcription.id);
+      await deleteTranscription(transcription.id);
       router.push(`/${lang}/library`);
     }
   };
