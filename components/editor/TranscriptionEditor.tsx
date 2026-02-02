@@ -162,51 +162,65 @@ export default function TranscriptionEditor({
   );
 
   return (
-    <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
-      {/* Header */}
-      <EditorHeader
-        transcription={transcription}
-        editorState={editorState}
-        totalSegments={segments.length}
-        approvedCount={approvedCount}
-        lang={lang}
-        translations={t}
-        previousId={previousId}
-        nextId={nextId}
-        onFinalize={handleFinalize}
-        onExport={handleExport}
-      />
+    <div
+      className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 max-h-[calc(100vh-175px)]"
+      style={{
+        display: 'grid',
+        gridTemplateAreas: `
+          "header header"
+          "sidebar segments"
+        `,
+        gridTemplateRows: 'auto 1fr',
+        gridTemplateColumns: '320px 1fr',
+      }}
+    >
+      {/* Header - sticky top */}
+      <div style={{ gridArea: 'header' }}>
+        <EditorHeader
+          transcription={transcription}
+          editorState={editorState}
+          totalSegments={segments.length}
+          approvedCount={approvedCount}
+          lang={lang}
+          translations={t}
+          previousId={previousId}
+          nextId={nextId}
+          onFinalize={handleFinalize}
+          onExport={handleExport}
+        />
+      </div>
 
-      {/* Main Content */}
-      <div className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-8 overflow-hidden">
-        <div className="h-full flex flex-col lg:flex-row gap-6">
-          {/* Left Sidebar: Audio Player + Speaker Legend - Fixed width */}
-          <div className="lg:w-80 shrink-0 space-y-4">
-            <AudioPlayer
-              ref={audioRef}
-              audioFileId={editorState.audioFileId}
-              onTimeUpdate={handleTimeUpdate}
-              onPlayingChange={setIsPlaying}
-              translations={t}
-            />
-            <SpeakerLegend segments={segments} translations={t} />
-          </div>
+      {/* Left Sidebar: Audio Player + Speaker Legend - sticky */}
+      <div
+        style={{ gridArea: 'sidebar' }}
+        className="p-6 space-y-4 overflow-hidden"
+      >
+        <AudioPlayer
+          ref={audioRef}
+          audioFileId={editorState.audioFileId}
+          onTimeUpdate={handleTimeUpdate}
+          onPlayingChange={setIsPlaying}
+          translations={t}
+        />
+        <SpeakerLegend segments={segments} translations={t} />
+      </div>
 
-          {/* Right: Segment List - Takes remaining width */}
-          <div className="flex-1 min-w-0 overflow-y-auto">
-            <SegmentList
-              segments={segments}
-              approvals={editorState.approvals}
-              highlightedSegmentIndex={highlightedSegmentIndex}
-              isPlaying={isPlaying}
-              onApprove={handleApprove}
-              onUnapprove={handleUnapprove}
-              onEdit={handleEdit}
-              onTimestampClick={handleTimestampClick}
-              translations={t}
-            />
-          </div>
-        </div>
+      {/* Segments List - scrollable */}
+      <div
+        style={{ gridArea: 'segments' }}
+        className="overflow-y-auto p-6 pl-0"
+      >
+        <SegmentList
+          segments={segments}
+          approvals={editorState.approvals}
+          highlightedSegmentIndex={highlightedSegmentIndex}
+          isPlaying={isPlaying}
+          onApprove={handleApprove}
+          onUnapprove={handleUnapprove}
+          onEdit={handleEdit}
+          onTimestampClick={handleTimestampClick}
+          translations={t}
+        />
       </div>
     </div>
   );

@@ -45,8 +45,8 @@ export default function EditorHeader({
 
   return (
     <>
-      {/* Main Header - Sticky below navbar */}
-      <div className="bg-white border-b border-slate-200 sticky top-[66px] z-10">
+      {/* Main Header */}
+      <div className="bg-white border-b border-slate-200 shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           {/* Row 1: Back Button + File Info + Actions */}
           <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
