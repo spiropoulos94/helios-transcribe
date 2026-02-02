@@ -29,7 +29,7 @@ export default function SegmentList({
   translations,
 }: SegmentListProps) {
   return (
-    <div className="space-y-4 custom-scrollbar" >
+    <div className="space-y-3 sm:space-y-4 custom-scrollbar" >
       {segments.map((segment, index) => {
         const approval = approvals[index] || {
           segmentIndex: index,

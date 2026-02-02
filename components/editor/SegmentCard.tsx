@@ -73,7 +73,7 @@ export default function SegmentCard({
 
   // Determine card styling based on state
   const getCardClasses = () => {
-    const baseClasses = 'rounded-xl border-2 p-4 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4';
+    const baseClasses = 'rounded-xl border-2 p-3 sm:p-4 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4';
 
     if (isEditing) {
       return `${baseClasses} bg-yellow-50 border-yellow-400 shadow-md`;
@@ -102,11 +102,11 @@ export default function SegmentCard({
       }}
     >
       {/* Header: Speaker, Timestamp, Approval Status */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {/* Speaker Badge */}
           <span
-            className={`px-3 py-1 rounded-md text-sm font-medium ${speakerColor.bg} ${speakerColor.text} ${speakerColor.border} border`}
+            className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-md text-xs sm:text-sm font-medium ${speakerColor.bg} ${speakerColor.text} ${speakerColor.border} border`}
           >
             {segment.speaker}
           </span>
@@ -114,7 +114,7 @@ export default function SegmentCard({
           {/* Timestamp (clickable) */}
           <button
             onClick={() => onTimestampClick(segment)}
-            className="text-sm text-slate-500 hover:text-blue-600 transition-colors font-mono"
+            className="text-xs sm:text-sm text-slate-500 hover:text-blue-600 transition-colors font-mono"
             title={t?.editor?.clickToJump || "Click to jump to this timestamp"}
           >
             {formatTimestamp(segment.startTime)} - {formatTimestamp(segment.endTime)}
@@ -122,7 +122,7 @@ export default function SegmentCard({
 
           {/* Edited Badge */}
           {hasBeenEdited && !isEditing && (
-            <span className="px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 text-xs font-medium">
+            <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 text-[10px] sm:text-xs font-medium">
               {t?.editor?.edited || 'Edited'}
             </span>
           )}
@@ -131,7 +131,7 @@ export default function SegmentCard({
         {/* Approval Checkbox/Icon */}
         <button
           onClick={handleApproveToggle}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors self-start sm:self-auto ${
             approval.approved
               ? 'bg-green-100 text-green-700 hover:bg-green-200'
               : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -140,12 +140,12 @@ export default function SegmentCard({
         >
           {approval.approved ? (
             <>
-              <Check className="w-4 h-4" />
+              <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>{t?.editor?.approved || 'Approved'}</span>
             </>
           ) : (
             <>
-              <div className="w-4 h-4 border-2 border-slate-400 rounded" />
+              <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-slate-400 rounded" />
               <span>{t?.editor?.approve || 'Approve'}</span>
             </>
           )}
@@ -159,38 +159,38 @@ export default function SegmentCard({
             ref={textAreaRef}
             value={editedText}
             onChange={(e) => setEditedText(e.target.value)}
-            className="w-full px-3 py-2 border border-yellow-300 rounded-lg text-slate-700 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            className="w-full px-3 py-2 border border-yellow-300 rounded-lg text-sm sm:text-base text-slate-700 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-yellow-400"
             rows={3}
             style={{ minHeight: '80px' }}
           />
           <div className="flex items-center gap-2">
             <button
               onClick={handleSaveEdit}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs sm:text-sm font-medium"
             >
-              <Save className="w-4 h-4" />
+              <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {t?.editor?.save || t?.common?.save || 'Save'}
             </button>
             <button
               onClick={handleCancelEdit}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors text-sm font-medium"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors text-xs sm:text-sm font-medium"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {t?.editor?.cancel || t?.common?.cancel || 'Cancel'}
             </button>
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
-          <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{displayText}</p>
+        <div className="space-y-2 sm:space-y-3">
+          <p className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap">{displayText}</p>
 
           {/* Edit Button */}
           {!approval.approved && (
             <button
               onClick={() => setIsEditing(true)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             >
-              <Edit2 className="w-4 h-4" />
+              <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {t?.editor?.edit || t?.common?.edit || 'Edit'}
             </button>
           )}

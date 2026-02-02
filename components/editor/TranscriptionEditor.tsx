@@ -162,20 +162,9 @@ export default function TranscriptionEditor({
   );
 
   return (
-    <div
-      className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 max-h-[calc(100vh-67px)]"
-      style={{
-        display: 'grid',
-        gridTemplateAreas: `
-          "header header"
-          "sidebar segments"
-        `,
-        gridTemplateRows: 'auto 1fr',
-        gridTemplateColumns: '320px 1fr',
-      }}
-    >
+    <div className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 h-[100vh] max-h-[calc(100vh-67px)] flex flex-col">
       {/* Header - sticky top */}
-      <div style={{ gridArea: 'header' }}>
+      <div className="shrink-0">
         <EditorHeader
           transcription={transcription}
           editorState={editorState}
@@ -190,37 +179,46 @@ export default function TranscriptionEditor({
         />
       </div>
 
-      {/* Left Sidebar: Audio Player + Speaker Legend - sticky */}
-      <div
-        style={{ gridArea: 'sidebar' }}
-        className="p-6 space-y-4 overflow-hidden"
-      >
+      {/* Mobile: Compact Audio Player (sticky bar) */}
+      <div className="lg:hidden shrink-0">
         <AudioPlayer
           ref={audioRef}
           audioFileId={editorState.audioFileId}
           onTimeUpdate={handleTimeUpdate}
           onPlayingChange={setIsPlaying}
           translations={t}
+          compact
         />
-        <SpeakerLegend segments={segments} translations={t} />
       </div>
 
-      {/* Segments List - scrollable */}
-      <div
-        style={{ gridArea: 'segments' }}
-        className="overflow-y-auto p-6 pl-0"
-      >
-        <SegmentList
-          segments={segments}
-          approvals={editorState.approvals}
-          highlightedSegmentIndex={highlightedSegmentIndex}
-          isPlaying={isPlaying}
-          onApprove={handleApprove}
-          onUnapprove={handleUnapprove}
-          onEdit={handleEdit}
-          onTimestampClick={handleTimestampClick}
-          translations={t}
-        />
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Desktop Sidebar: Audio Player + Speaker Legend */}
+        <div className="hidden lg:flex lg:flex-col lg:w-80 lg:shrink-0 p-6 space-y-4 overflow-y-auto">
+          <AudioPlayer
+            ref={audioRef}
+            audioFileId={editorState.audioFileId}
+            onTimeUpdate={handleTimeUpdate}
+            onPlayingChange={setIsPlaying}
+            translations={t}
+          />
+          <SpeakerLegend segments={segments} translations={t} />
+        </div>
+
+        {/* Segments List - scrollable */}
+        <div className="flex-1 overflow-y-auto p-4 lg:p-6 lg:pl-0">
+          <SegmentList
+            segments={segments}
+            approvals={editorState.approvals}
+            highlightedSegmentIndex={highlightedSegmentIndex}
+            isPlaying={isPlaying}
+            onApprove={handleApprove}
+            onUnapprove={handleUnapprove}
+            onEdit={handleEdit}
+            onTimestampClick={handleTimestampClick}
+            translations={t}
+          />
+        </div>
       </div>
     </div>
   );
