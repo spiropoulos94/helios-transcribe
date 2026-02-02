@@ -163,7 +163,7 @@ export default function TranscriptionEditor({
 
   return (
     <div
-      className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 max-h-[calc(100vh-175px)]"
+      className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 max-h-[calc(100vh-67px)]"
       style={{
         display: 'grid',
         gridTemplateAreas: `
