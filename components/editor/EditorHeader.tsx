@@ -133,36 +133,6 @@ export default function EditorHeader({
         </div>
       </div>
 
-      {/* Floating Previous/Next Navigation */}
-      <div className="fixed bottom-4 sm:bottom-6 left-0 right-0 z-30 pointer-events-none">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex justify-between">
-          {/* Previous Button - Bottom Left */}
-          {previousId ? (
-            <Link
-              href={`/${lang}/library/${previousId}`}
-              className="pointer-events-auto inline-flex items-center gap-1 sm:gap-2 px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-medium text-white bg-slate-700 hover:bg-slate-800 rounded-full transition-all shadow-lg hover:shadow-xl active:scale-95 sm:hover:scale-105"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">{t.libraryDetail?.previous || 'Previous'}</span>
-            </Link>
-          ) : (
-            <div></div>
-          )}
-
-          {/* Next Button - Bottom Right */}
-          {nextId ? (
-            <Link
-              href={`/${lang}/library/${nextId}`}
-              className="pointer-events-auto inline-flex items-center gap-1 sm:gap-2 px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-medium text-white bg-slate-700 hover:bg-slate-800 rounded-full transition-all shadow-lg hover:shadow-xl active:scale-95 sm:hover:scale-105"
-            >
-              <span className="hidden sm:inline">{t.libraryDetail?.next || 'Next'}</span>
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          ) : (
-            <div></div>
-          )}
-        </div>
-      </div>
     </>
   );
 }
