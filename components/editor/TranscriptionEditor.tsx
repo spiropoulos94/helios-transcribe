@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { SavedTranscription, TranscriptionEditorState, updateTranscriptionEditorState, getSavedTranscriptions } from '@/lib/transcriptionStorage';
+import { SavedTranscription, TranscriptionEditorState, updateTranscriptionEditorState, getAdjacentTranscriptionIds } from '@/lib/transcriptionStorage';
 import { TranscriptionSegment } from '@/lib/ai/types';
 import { type Locale } from '@/i18n/config';
+import { SPEAKER_COLORS, ColorScheme } from '@/lib/editor/speakerColors';
+import { useEditorKeyboardShortcuts } from '@/lib/hooks/useEditorKeyboardShortcuts';
 import EditorHeader from './EditorHeader';
 import AudioPlayer from './AudioPlayer';
 import SpeakerLegend from './SpeakerLegend';
@@ -27,21 +29,35 @@ export default function TranscriptionEditor({
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [highlightedSegmentIndex, setHighlightedSegmentIndex] = useState<number | null>(null);
+  const [selectedSegmentIndex, setSelectedSegmentIndex] = useState<number | null>(null);
+  const [isEditRequested, setIsEditRequested] = useState(false);
   const [previousId, setPreviousId] = useState<string | null>(null);
   const [nextId, setNextId] = useState<string | null>(null);
 
   const segments = transcription.metadata?.structuredData?.segments || [];
 
-  // Get prev/next transcription IDs
+  // Memoize speaker colors - compute once instead of O(n) per segment
+  const speakerColorMap = useMemo(() => {
+    const uniqueSpeakers: string[] = [];
+    for (const segment of segments) {
+      if (!uniqueSpeakers.includes(segment.speaker)) {
+        uniqueSpeakers.push(segment.speaker);
+      }
+    }
+    return Object.fromEntries(
+      uniqueSpeakers.map((speaker, i) => [speaker, SPEAKER_COLORS[i % SPEAKER_COLORS.length]])
+    ) as Record<string, ColorScheme>;
+  }, [segments]);
+
+  // Ref for throttling audio time updates
+  const lastHighlightUpdateRef = useRef(0);
+
+  // Get prev/next transcription IDs (efficient - only fetches adjacent records)
   useEffect(() => {
     const loadNavigation = async () => {
-      const allTranscriptions = await getSavedTranscriptions();
-      const currentIndex = allTranscriptions.findIndex((t) => t.id === transcription.id);
-
-      if (currentIndex !== -1) {
-        setPreviousId(currentIndex > 0 ? allTranscriptions[currentIndex - 1].id : null);
-        setNextId(currentIndex < allTranscriptions.length - 1 ? allTranscriptions[currentIndex + 1].id : null);
-      }
+      const { prevId, nextId } = await getAdjacentTranscriptionIds(transcription.id);
+      setPreviousId(prevId);
+      setNextId(nextId);
     };
     loadNavigation();
   }, [transcription.id]);
@@ -55,7 +71,7 @@ export default function TranscriptionEditor({
     return () => clearTimeout(timeoutId);
   }, [editorState, transcription.id]);
 
-  // Handle audio time update -> highlight current segment
+  // Handle audio time update -> highlight current segment (throttled to ~4/sec)
   const handleTimeUpdate = useCallback(
     (time: number) => {
       setCurrentTime(time);
@@ -65,7 +81,10 @@ export default function TranscriptionEditor({
         (s) => time >= s.startTime && time <= s.endTime
       );
 
-      if (index !== -1 && index !== highlightedSegmentIndex) {
+      // Throttle highlight updates to reduce re-renders
+      const now = Date.now();
+      if (index !== -1 && index !== highlightedSegmentIndex && now - lastHighlightUpdateRef.current > 250) {
+        lastHighlightUpdateRef.current = now;
         setHighlightedSegmentIndex(index);
       }
     },
@@ -161,6 +180,70 @@ export default function TranscriptionEditor({
     [editorState.approvals]
   );
 
+  // Keyboard shortcut handlers
+  const handleKeyboardApprove = useCallback(() => {
+    const index = selectedSegmentIndex ?? highlightedSegmentIndex;
+    if (index !== null) {
+      const approval = editorState.approvals[index];
+      if (approval?.approved) {
+        handleUnapprove(index);
+      } else {
+        handleApprove(index);
+      }
+    }
+  }, [selectedSegmentIndex, highlightedSegmentIndex, editorState.approvals, handleApprove, handleUnapprove]);
+
+  const handleKeyboardEdit = useCallback(() => {
+    const index = selectedSegmentIndex ?? highlightedSegmentIndex;
+    if (index !== null) {
+      setSelectedSegmentIndex(index);
+      setIsEditRequested(true);
+    }
+  }, [selectedSegmentIndex, highlightedSegmentIndex]);
+
+  const handleEditRequestHandled = useCallback(() => {
+    setIsEditRequested(false);
+  }, []);
+
+  const handleNextSegment = useCallback(() => {
+    setSelectedSegmentIndex((prev) => {
+      if (prev === null) return highlightedSegmentIndex ?? 0;
+      return Math.min(prev + 1, segments.length - 1);
+    });
+  }, [segments.length, highlightedSegmentIndex]);
+
+  const handlePrevSegment = useCallback(() => {
+    setSelectedSegmentIndex((prev) => {
+      if (prev === null) return highlightedSegmentIndex ?? 0;
+      return Math.max(prev - 1, 0);
+    });
+  }, [highlightedSegmentIndex]);
+
+  const handlePlayPause = useCallback(() => {
+    if (audioRef.current) {
+      if (audioRef.current.paused) {
+        audioRef.current.play();
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, []);
+
+  const handleEscape = useCallback(() => {
+    setSelectedSegmentIndex(null);
+  }, []);
+
+  // Register keyboard shortcuts
+  useEditorKeyboardShortcuts({
+    onApprove: handleKeyboardApprove,
+    onEdit: handleKeyboardEdit,
+    onNextSegment: handleNextSegment,
+    onPrevSegment: handlePrevSegment,
+    onPlayPause: handlePlayPause,
+    onEscape: handleEscape,
+    enabled: true,
+  });
+
   return (
     <div className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 h-[100vh] max-h-[calc(100vh-67px)] flex flex-col">
       {/* Header - sticky top */}
@@ -210,12 +293,17 @@ export default function TranscriptionEditor({
           <SegmentList
             segments={segments}
             approvals={editorState.approvals}
+            speakerColorMap={speakerColorMap}
             highlightedSegmentIndex={highlightedSegmentIndex}
+            selectedSegmentIndex={selectedSegmentIndex}
             isPlaying={isPlaying}
+            isEditRequested={isEditRequested}
             onApprove={handleApprove}
             onUnapprove={handleUnapprove}
             onEdit={handleEdit}
             onTimestampClick={handleTimestampClick}
+            onSelect={setSelectedSegmentIndex}
+            onEditRequestHandled={handleEditRequestHandled}
             translations={t}
           />
         </div>

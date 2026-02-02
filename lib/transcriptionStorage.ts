@@ -61,6 +61,30 @@ export interface SavedTranscription {
 }
 
 /**
+ * Lightweight transcription item for list views (excludes heavy data)
+ */
+export interface TranscriptionListItem {
+  id: string;
+  fileName: string;
+  timestamp: number;
+  provider?: string;
+  preview: string; // First 200 chars of text
+  metadata?: {
+    wordCount?: number;
+    model?: string;
+    audioDurationSeconds?: number;
+    processingTimeMs?: number;
+    error?: string;
+    pricing?: {
+      model10min: string;
+      model30min: string;
+      model1hr: string;
+      bestFor: string;
+    };
+  };
+}
+
+/**
  * Initialize IndexedDB database
  */
 function openDB(): Promise<IDBDatabase> {
@@ -121,6 +145,146 @@ export async function getSavedTranscriptions(): Promise<SavedTranscription[]> {
   } catch (error) {
     console.error('[TranscriptionStorage] Error reading transcriptions:', error);
     return [];
+  }
+}
+
+/**
+ * Get paginated list of transcriptions with lightweight metadata only
+ * Uses cursor-based pagination for efficient large dataset handling
+ */
+export async function getTranscriptionList(
+  cursor?: number,
+  limit: number = 20
+): Promise<{ items: TranscriptionListItem[]; nextCursor: number | null; total: number }> {
+  if (typeof window === 'undefined') return { items: [], nextCursor: null, total: 0 };
+
+  try {
+    const db = await openDB();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const index = store.index('timestamp');
+
+      const items: TranscriptionListItem[] = [];
+
+      // Get total count first
+      const countRequest = store.count();
+      let total = 0;
+
+      countRequest.onsuccess = () => {
+        total = countRequest.result;
+
+        // Use cursor with descending order (newest first)
+        const range = cursor ? IDBKeyRange.upperBound(cursor, true) : null;
+        const cursorRequest = index.openCursor(range, 'prev');
+
+        cursorRequest.onsuccess = (event) => {
+          const cursorResult = (event.target as IDBRequest<IDBCursorWithValue>).result;
+
+          if (cursorResult && items.length < limit) {
+            const full = cursorResult.value as SavedTranscription;
+
+            // Convert to lightweight list item
+            items.push({
+              id: full.id,
+              fileName: full.fileName,
+              timestamp: full.timestamp,
+              provider: full.provider,
+              preview: full.text.slice(0, 200),
+              metadata: {
+                wordCount: full.metadata?.wordCount,
+                model: full.metadata?.model,
+                audioDurationSeconds: full.metadata?.audioDurationSeconds,
+                processingTimeMs: full.metadata?.processingTimeMs,
+                error: full.metadata?.error,
+                pricing: full.metadata?.pricing,
+              },
+            });
+            cursorResult.continue();
+          } else {
+            const nextCursor = items.length === limit ? items[items.length - 1].timestamp : null;
+            resolve({ items, nextCursor, total });
+          }
+        };
+
+        cursorRequest.onerror = () => reject(cursorRequest.error);
+      };
+
+      countRequest.onerror = () => reject(countRequest.error);
+      transaction.oncomplete = () => db.close();
+    });
+  } catch (error) {
+    console.error('[TranscriptionStorage] Error fetching transcription list:', error);
+    return { items: [], nextCursor: null, total: 0 };
+  }
+}
+
+/**
+ * Get adjacent transcription IDs for navigation (prev/next)
+ * Efficient query that only fetches the adjacent records, not the full list
+ */
+export async function getAdjacentTranscriptionIds(
+  currentId: string
+): Promise<{ prevId: string | null; nextId: string | null }> {
+  if (typeof window === 'undefined') return { prevId: null, nextId: null };
+
+  try {
+    const db = await openDB();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const index = store.index('timestamp');
+
+      // First get the current transcription to find its timestamp
+      const currentRequest = store.get(currentId);
+
+      currentRequest.onsuccess = () => {
+        const current = currentRequest.result as SavedTranscription | undefined;
+        if (!current) {
+          resolve({ prevId: null, nextId: null });
+          return;
+        }
+
+        let prevId: string | null = null;
+        let nextId: string | null = null;
+        let completed = 0;
+
+        const checkComplete = () => {
+          completed++;
+          if (completed === 2) {
+            resolve({ prevId, nextId });
+          }
+        };
+
+        // Get previous (newer - higher timestamp)
+        const prevRange = IDBKeyRange.lowerBound(current.timestamp, true);
+        const prevRequest = index.openCursor(prevRange, 'next');
+        prevRequest.onsuccess = (e) => {
+          const c = (e.target as IDBRequest<IDBCursorWithValue>).result;
+          if (c) prevId = c.value.id;
+          checkComplete();
+        };
+        prevRequest.onerror = () => checkComplete();
+
+        // Get next (older - lower timestamp)
+        const nextRange = IDBKeyRange.upperBound(current.timestamp, true);
+        const nextRequest = index.openCursor(nextRange, 'prev');
+        nextRequest.onsuccess = (e) => {
+          const c = (e.target as IDBRequest<IDBCursorWithValue>).result;
+          if (c) nextId = c.value.id;
+          checkComplete();
+        };
+        nextRequest.onerror = () => checkComplete();
+      };
+
+      currentRequest.onerror = () => reject(currentRequest.error);
+      transaction.oncomplete = () => db.close();
+    });
+  } catch (error) {
+    console.error('[TranscriptionStorage] Error fetching adjacent IDs:', error);
+    return { prevId: null, nextId: null };
   }
 }
 

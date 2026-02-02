@@ -213,6 +213,13 @@
     "errorLoadingAudio": "Σφάλμα φόρτωσης ήχου",
     "speed": "Ταχύτητα",
     "finalizeSuccess": "Η μεταγραφή ολοκληρώθηκε επιτυχώς!",
-    "clickToJump": "Κάντε κλικ για μετάβαση σε αυτή τη χρονική στιγμή"
+    "clickToJump": "Κάντε κλικ για μετάβαση σε αυτή τη χρονική στιγμή",
+    "keyboardShortcuts": "Συντομεύσεις Πληκτρολογίου",
+    "shortcutApprove": "Έγκριση/Απόρριψη τμήματος",
+    "shortcutEdit": "Επεξεργασία τμήματος",
+    "shortcutNext": "Επόμενο τμήμα",
+    "shortcutPrev": "Προηγούμενο τμήμα",
+    "shortcutPlayPause": "Αναπαραγωγή/Παύση",
+    "shortcutEscape": "Απαλοιφή επιλογής"
   }
 }

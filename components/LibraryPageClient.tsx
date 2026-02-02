@@ -1,9 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { History, Trash2, FileText } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { History, Trash2, FileText, Loader2 } from 'lucide-react';
 import { TranscriptionCard } from '@/components/TranscriptionCard';
-import { SavedTranscription, getSavedTranscriptions, deleteTranscription, clearAllTranscriptions, migrateFromLocalStorage } from '@/lib/transcriptionStorage';
+import {
+  TranscriptionListItem,
+  getTranscriptionList,
+  deleteTranscription,
+  clearAllTranscriptions,
+  migrateFromLocalStorage
+} from '@/lib/transcriptionStorage';
 import Link from 'next/link';
 import { type Locale } from '@/i18n/config';
 
@@ -12,9 +18,14 @@ interface LibraryPageClientProps {
   lang: Locale;
 }
 
+const PAGE_SIZE = 20;
+
 export default function LibraryPageClient({ translations: t, lang }: LibraryPageClientProps) {
-  const [transcriptions, setTranscriptions] = useState<SavedTranscription[]>([]);
+  const [transcriptions, setTranscriptions] = useState<TranscriptionListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<number | null>(null);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     initializeAndLoad();
@@ -29,22 +40,40 @@ export default function LibraryPageClient({ translations: t, lang }: LibraryPage
 
   const loadTranscriptions = async () => {
     setIsLoading(true);
-    const saved = await getSavedTranscriptions();
-    setTranscriptions(saved);
+    const result = await getTranscriptionList(undefined, PAGE_SIZE);
+    setTranscriptions(result.items);
+    setNextCursor(result.nextCursor);
+    setTotal(result.total);
     setIsLoading(false);
   };
 
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || isLoadingMore) return;
+
+    setIsLoadingMore(true);
+    const result = await getTranscriptionList(nextCursor, PAGE_SIZE);
+    setTranscriptions(prev => [...prev, ...result.items]);
+    setNextCursor(result.nextCursor);
+    setIsLoadingMore(false);
+  }, [nextCursor, isLoadingMore]);
+
   const handleDelete = async (id: string) => {
     await deleteTranscription(id);
-    await loadTranscriptions();
+    // Remove from local state instead of reloading all
+    setTranscriptions(prev => prev.filter(t => t.id !== id));
+    setTotal(prev => prev - 1);
   };
 
   const handleClearAll = async () => {
     if (window.confirm('Are you sure you want to delete all saved transcriptions? This action cannot be undone.')) {
       await clearAllTranscriptions();
-      await loadTranscriptions();
+      setTranscriptions([]);
+      setNextCursor(null);
+      setTotal(0);
     }
   };
+
+  const hasMore = nextCursor !== null;
 
   return (
     <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
@@ -59,7 +88,7 @@ export default function LibraryPageClient({ translations: t, lang }: LibraryPage
             <div>
               <h1 className="text-3xl font-bold text-slate-900">{t.title}</h1>
               <p className="text-sm text-slate-500 mt-1">
-                {isLoading ? 'Loading...' : `${transcriptions.length} saved ${transcriptions.length === 1 ? 'transcription' : 'transcriptions'}`}
+                {isLoading ? 'Loading...' : `${total} saved ${total === 1 ? 'transcription' : 'transcriptions'}`}
               </p>
             </div>
           </div>
@@ -99,17 +128,41 @@ export default function LibraryPageClient({ translations: t, lang }: LibraryPage
           </div>
         ) : (
           // Grid of Transcriptions
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4">
-            {transcriptions.map((transcription) => (
-              <TranscriptionCard
-                key={transcription.id}
-                transcription={transcription}
-                onDelete={handleDelete}
-                lang={lang}
-                translations={t}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4">
+              {transcriptions.map((transcription) => (
+                <TranscriptionCard
+                  key={transcription.id}
+                  transcription={transcription}
+                  onDelete={handleDelete}
+                  lang={lang}
+                  translations={t}
+                />
+              ))}
+            </div>
+
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="flex justify-center mt-8">
+                <button
+                  onClick={loadMore}
+                  disabled={isLoadingMore}
+                  className="px-6 py-3 bg-white border border-slate-200 rounded-lg font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      Load more ({total - transcriptions.length} remaining)
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </>
         )}
 
       </main>

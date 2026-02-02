@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Trash2, CheckCircle } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Trash2, CheckCircle, Keyboard } from 'lucide-react';
 import { SavedTranscription, deleteTranscription, TranscriptionEditorState } from '@/lib/transcriptionStorage';
 import { type Locale } from '@/i18n/config';
 
@@ -32,6 +33,7 @@ export default function EditorHeader({
   onExport,
 }: EditorHeaderProps) {
   const router = useRouter();
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const handleDelete = async () => {
     if (window.confirm(t.libraryDetail?.confirmDelete || 'Are you sure you want to delete this transcription?')) {
@@ -71,6 +73,63 @@ export default function EditorHeader({
 
             {/* Action Buttons */}
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              {/* Keyboard Shortcuts Help */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowShortcuts(!showShortcuts)}
+                  className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  title={t.editor?.keyboardShortcuts || 'Keyboard Shortcuts'}
+                >
+                  <Keyboard className="w-4 h-4" />
+                </button>
+
+                {showShortcuts && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowShortcuts(false)}
+                    />
+                    <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-xl shadow-xl border border-slate-200 p-4 min-w-[240px]">
+                      <h3 className="text-sm font-semibold text-slate-900 mb-3">
+                        {t.editor?.keyboardShortcuts || 'Keyboard Shortcuts'}
+                      </h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">{t.editor?.shortcutApprove || 'Toggle approve'}</span>
+                          <kbd className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-mono">A</kbd>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">{t.editor?.shortcutEdit || 'Edit segment'}</span>
+                          <kbd className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-mono">E</kbd>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">{t.editor?.shortcutNext || 'Next segment'}</span>
+                          <div className="flex gap-1">
+                            <kbd className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-mono">J</kbd>
+                            <kbd className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-mono">↓</kbd>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">{t.editor?.shortcutPrev || 'Previous segment'}</span>
+                          <div className="flex gap-1">
+                            <kbd className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-mono">K</kbd>
+                            <kbd className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-mono">↑</kbd>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">{t.editor?.shortcutPlayPause || 'Play/Pause'}</span>
+                          <kbd className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-mono">Space</kbd>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600">{t.editor?.shortcutEscape || 'Clear selection'}</span>
+                          <kbd className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-mono">Esc</kbd>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
               {allApproved && editorState.isDraft && (
                 <button
                   onClick={onFinalize}

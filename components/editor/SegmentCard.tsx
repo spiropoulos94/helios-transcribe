@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { Check, Edit2, X, Save } from 'lucide-react';
 import { TranscriptionSegment } from '@/lib/ai/types';
 import { SegmentApproval } from '@/lib/transcriptionStorage';
@@ -11,39 +11,39 @@ interface SegmentCardProps {
   index: number;
   approval: SegmentApproval;
   isHighlighted: boolean;
+  isSelected: boolean;
   isPlaying: boolean;
+  isEditRequested: boolean;
   speakerColor: ColorScheme;
   onApprove: (index: number) => void;
   onUnapprove: (index: number) => void;
   onEdit: (index: number, newText: string) => void;
   onTimestampClick: (segment: TranscriptionSegment) => void;
+  onSelect: (index: number | null) => void;
+  onEditRequestHandled: () => void;
   translations?: any;
 }
 
-export default function SegmentCard({
+function SegmentCard({
   segment,
   index,
   approval,
   isHighlighted,
+  isSelected,
   isPlaying,
+  isEditRequested,
   speakerColor,
   onApprove,
   onUnapprove,
   onEdit,
   onTimestampClick,
+  onSelect,
+  onEditRequestHandled,
   translations: t,
 }: SegmentCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(approval.editedText || segment.text);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to highlighted segment
-  useEffect(() => {
-    if (isHighlighted && cardRef.current) {
-      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [isHighlighted]);
 
   // Auto-focus textarea when entering edit mode
   useEffect(() => {
@@ -52,6 +52,14 @@ export default function SegmentCard({
       textAreaRef.current.select();
     }
   }, [isEditing]);
+
+  // Handle edit request from keyboard shortcut
+  useEffect(() => {
+    if (isEditRequested && isSelected && !approval.approved && !isEditing) {
+      setIsEditing(true);
+      onEditRequestHandled();
+    }
+  }, [isEditRequested, isSelected, approval.approved, isEditing, onEditRequestHandled]);
 
   const handleSaveEdit = () => {
     onEdit(index, editedText);
@@ -73,10 +81,14 @@ export default function SegmentCard({
 
   // Determine card styling based on state
   const getCardClasses = () => {
-    const baseClasses = 'rounded-xl border-2 p-3 sm:p-4 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4';
+    const baseClasses = 'rounded-xl border-2 p-3 sm:p-4 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 cursor-pointer';
 
     if (isEditing) {
       return `${baseClasses} bg-yellow-50 border-yellow-400 shadow-md`;
+    }
+
+    if (isSelected) {
+      return `${baseClasses} bg-indigo-50 border-indigo-400 shadow-md ring-2 ring-indigo-200`;
     }
 
     if (approval.approved) {
@@ -95,11 +107,8 @@ export default function SegmentCard({
 
   return (
     <div
-      ref={cardRef}
       className={getCardClasses()}
-      style={{
-        animationDelay: `${index * 50}ms`,
-      }}
+      onClick={() => onSelect(index)}
     >
       {/* Header: Speaker, Timestamp, Approval Status */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-3">
@@ -199,3 +208,5 @@ export default function SegmentCard({
     </div>
   );
 }
+
+export default memo(SegmentCard);

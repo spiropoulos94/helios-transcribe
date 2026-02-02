@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { FileText, Download, Trash2, ChevronDown, ChevronUp, Copy, CheckCircle2, ArrowRight } from 'lucide-react';
-import { SavedTranscription } from '@/lib/transcriptionStorage';
+import { TranscriptionListItem, getTranscriptionById } from '@/lib/transcriptionStorage';
 import { formatDuration, formatProcessingTime } from '@/lib/utils/format';
 import { calculateTranscriptionCost } from '@/lib/pricing/calculator';
 import { type Locale } from '@/i18n/config';
 
 interface TranscriptionCardProps {
-  transcription: SavedTranscription;
+  transcription: TranscriptionListItem;
   onDelete: (id: string) => void;
   lang: Locale;
   translations: any;
@@ -16,27 +16,56 @@ interface TranscriptionCardProps {
 export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcription, onDelete, lang, translations: t }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isLoadingFull, setIsLoadingFull] = useState(false);
+  const [fullText, setFullText] = useState<string | null>(null);
 
-  const handleCopy = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    navigator.clipboard.writeText(transcription.text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  // Fetch full text on demand for copy/download
+  const fetchFullText = async (): Promise<string | null> => {
+    if (fullText) return fullText;
+
+    setIsLoadingFull(true);
+    try {
+      const full = await getTranscriptionById(transcription.id);
+      if (full) {
+        setFullText(full.text);
+        return full.text;
+      }
+    } catch (error) {
+      console.error('Failed to fetch full transcription:', error);
+    } finally {
+      setIsLoadingFull(false);
+    }
+    return null;
   };
 
-  const handleDownload = (e: React.MouseEvent) => {
+  const handleCopy = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const blob = new Blob([transcription.text], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${transcription.fileName.replace(/\.[^/.]+$/, '')}_transcript.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+
+    const text = await fetchFullText();
+    if (text) {
+      navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const text = await fetchFullText();
+    if (text) {
+      const blob = new Blob([text], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${transcription.fileName.replace(/\.[^/.]+$/, '')}_transcript.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -47,9 +76,13 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
     }
   };
 
-  const handleExpandToggle = (e: React.MouseEvent) => {
+  const handleExpandToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (!isExpanded && !fullText) {
+      await fetchFullText();
+    }
     setIsExpanded(!isExpanded);
   };
 
@@ -94,6 +127,9 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
     });
   };
 
+  // Use preview for list view, full text when expanded
+  const displayText = isExpanded && fullText ? fullText : transcription.preview;
+
   return (
     <Link
       href={`/${lang}/library/${transcription.id}`}
@@ -118,14 +154,16 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
           <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={handleCopy}
-              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              disabled={isLoadingFull}
+              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
               title="Copy to clipboard"
             >
               {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             </button>
             <button
               onClick={handleDownload}
-              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              disabled={isLoadingFull}
+              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
               title="Download"
             >
               <Download className="w-4 h-4" />
@@ -185,20 +223,23 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
       {/* Card Content */}
       <div className="p-4">
         <div className={`text-sm text-slate-600 leading-relaxed ${isExpanded ? '' : 'line-clamp-3'}`}>
-          {isExpanded ? (
+          {isExpanded && fullText ? (
             <div className="whitespace-pre-wrap font-serif">
-              {renderFormattedText(transcription.text)}
+              {renderFormattedText(fullText)}
             </div>
           ) : (
-            getPreview(transcription.text)
+            getPreview(displayText)
           )}
         </div>
         <div className="flex items-center justify-between mt-3">
           <button
             onClick={handleExpandToggle}
-            className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
+            disabled={isLoadingFull}
+            className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors disabled:opacity-50"
           >
-            {isExpanded ? (
+            {isLoadingFull ? (
+              'Loading...'
+            ) : isExpanded ? (
               <>
                 Show less <ChevronUp className="w-3 h-3" />
               </>

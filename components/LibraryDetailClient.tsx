@@ -18,7 +18,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { SavedTranscription, getTranscriptionById, deleteTranscription, getSavedTranscriptions } from '@/lib/transcriptionStorage';
+import { SavedTranscription, getTranscriptionById, deleteTranscription, getAdjacentTranscriptionIds } from '@/lib/transcriptionStorage';
 import { calculateTranscriptionCost } from '@/lib/pricing/calculator';
 import { type Locale } from '@/i18n/config';
 import TranscriptionEditor from './editor/TranscriptionEditor';
@@ -44,23 +44,16 @@ export default function LibraryDetailClient({ translations: t, lang, id }: Libra
   useEffect(() => {
     const loadData = async () => {
       if (id) {
-        const data = await getTranscriptionById(id);
+        // Load transcription and adjacent IDs in parallel
+        const [data, adjacentIds] = await Promise.all([
+          getTranscriptionById(id),
+          getAdjacentTranscriptionIds(id)
+        ]);
+
         setTranscription(data);
+        setPreviousId(adjacentIds.prevId);
+        setNextId(adjacentIds.nextId);
         setIsLoading(false);
-
-        // Get all transcriptions to find prev/next
-        const allTranscriptions = await getSavedTranscriptions();
-        const currentIndex = allTranscriptions.findIndex((t) => t.id === id);
-
-        if (currentIndex !== -1) {
-          // Previous item (newer) is at currentIndex - 1
-          setPreviousId(currentIndex > 0 ? allTranscriptions[currentIndex - 1].id : null);
-          // Next item (older) is at currentIndex + 1
-          setNextId(currentIndex < allTranscriptions.length - 1 ? allTranscriptions[currentIndex + 1].id : null);
-        } else {
-          setPreviousId(null);
-          setNextId(null);
-        }
       }
     };
     loadData();

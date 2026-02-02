@@ -213,6 +213,13 @@
     "errorLoadingAudio": "Error loading audio",
     "speed": "Speed",
     "finalizeSuccess": "Transcription finalized successfully!",
-    "clickToJump": "Click to jump to this timestamp"
+    "clickToJump": "Click to jump to this timestamp",
+    "keyboardShortcuts": "Keyboard Shortcuts",
+    "shortcutApprove": "Toggle approve",
+    "shortcutEdit": "Edit segment",
+    "shortcutNext": "Next segment",
+    "shortcutPrev": "Previous segment",
+    "shortcutPlayPause": "Play/Pause",
+    "shortcutEscape": "Clear selection"
   }
 }
