@@ -194,7 +194,7 @@ export default function TranscriptionEditor({
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Desktop Sidebar: Audio Player + Speaker Legend */}
-        <div className="hidden lg:flex lg:flex-col lg:w-80 lg:shrink-0 p-6 space-y-4 overflow-y-auto">
+        <div className="hidden lg:flex lg:flex-col lg:w-88 lg:shrink-0 p-6 space-y-4 overflow-y-auto">
           <AudioPlayer
             ref={audioRef}
             audioFileId={editorState.audioFileId}
