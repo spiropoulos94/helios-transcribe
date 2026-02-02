@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { FileText, Download, Trash2, ChevronDown, ChevronUp, Copy, CheckCircle2, ArrowRight } from 'lucide-react';
+import { FileText, Download, Trash2, ArrowRight } from 'lucide-react';
 import { TranscriptionListItem, getTranscriptionById } from '@/lib/transcriptionStorage';
 import { formatDuration, formatProcessingTime } from '@/lib/utils/format';
 import { calculateTranscriptionCost } from '@/lib/pricing/calculator';
@@ -14,12 +14,10 @@ interface TranscriptionCardProps {
 }
 
 export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcription, onDelete, lang, translations: t }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [isLoadingFull, setIsLoadingFull] = useState(false);
   const [fullText, setFullText] = useState<string | null>(null);
 
-  // Fetch full text on demand for copy/download
+  // Fetch full text on demand for download
   const fetchFullText = async (): Promise<string | null> => {
     if (fullText) return fullText;
 
@@ -36,18 +34,6 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
       setIsLoadingFull(false);
     }
     return null;
-  };
-
-  const handleCopy = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const text = await fetchFullText();
-    if (text) {
-      navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
   };
 
   const handleDownload = async (e: React.MouseEvent) => {
@@ -71,19 +57,9 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this transcription?')) {
+    if (window.confirm(t?.libraryDetail?.confirmDelete || 'Are you sure you want to delete this transcription?')) {
       onDelete(transcription.id);
     }
-  };
-
-  const handleExpandToggle = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!isExpanded && !fullText) {
-      await fetchFullText();
-    }
-    setIsExpanded(!isExpanded);
   };
 
   const formatDate = (timestamp: number) => {
@@ -94,12 +70,12 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffMins < 1) return t?.common?.justNow || 'Just now';
+    if (diffMins < 60) return `${diffMins}${t?.common?.minAgo || 'm ago'}`;
+    if (diffHours < 24) return `${diffHours}${t?.common?.hourAgo || 'h ago'}`;
+    if (diffDays < 7) return `${diffDays}${t?.common?.dayAgo || 'd ago'}`;
 
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(lang === 'el' ? 'el-GR' : 'en-US', {
       month: 'short',
       day: 'numeric',
       year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
@@ -110,25 +86,6 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
     if (text.length <= maxLength) return text;
     return text.slice(0, maxLength) + '...';
   };
-
-  // Helper function to format speaker labels with bold text
-  const renderFormattedText = (text: string) => {
-    const parts = text.split(/(Ομιλητής \d+:|Speaker \d+:)/g);
-
-    return parts.map((part, index) => {
-      if (part.match(/^(Ομιλητής \d+:|Speaker \d+:)$/)) {
-        return (
-          <span key={index} className="block font-bold text-slate-900 mt-4 mb-1">
-            {part}
-          </span>
-        );
-      }
-      return <span key={index}>{part}</span>;
-    });
-  };
-
-  // Use preview for list view, full text when expanded
-  const displayText = isExpanded && fullText ? fullText : transcription.preview;
 
   return (
     <Link
@@ -153,25 +110,17 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             <button
-              onClick={handleCopy}
-              disabled={isLoadingFull}
-              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
-              title="Copy to clipboard"
-            >
-              {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            </button>
-            <button
               onClick={handleDownload}
               disabled={isLoadingFull}
               className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
-              title="Download"
+              title={t?.common?.download || 'Download'}
             >
               <Download className="w-4 h-4" />
             </button>
             <button
               onClick={handleDeleteClick}
               className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              title="Delete"
+              title={t?.common?.delete || 'Delete'}
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -222,35 +171,12 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
 
       {/* Card Content */}
       <div className="p-4">
-        <div className={`text-sm text-slate-600 leading-relaxed ${isExpanded ? '' : 'line-clamp-3'}`}>
-          {isExpanded && fullText ? (
-            <div className="whitespace-pre-wrap font-serif">
-              {renderFormattedText(fullText)}
-            </div>
-          ) : (
-            getPreview(displayText)
-          )}
+        <div className="text-sm text-slate-600 leading-relaxed line-clamp-3">
+          {getPreview(transcription.preview)}
         </div>
-        <div className="flex items-center justify-between mt-3">
-          <button
-            onClick={handleExpandToggle}
-            disabled={isLoadingFull}
-            className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors disabled:opacity-50"
-          >
-            {isLoadingFull ? (
-              'Loading...'
-            ) : isExpanded ? (
-              <>
-                Show less <ChevronUp className="w-3 h-3" />
-              </>
-            ) : (
-              <>
-                Show more <ChevronDown className="w-3 h-3" />
-              </>
-            )}
-          </button>
+        <div className="flex items-center justify-end mt-3">
           <div className="text-xs font-medium text-blue-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            View details <ArrowRight className="w-3 h-3" />
+            {t?.common?.viewDetails || 'View details'} <ArrowRight className="w-3 h-3" />
           </div>
         </div>
       </div>

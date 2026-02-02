@@ -10,5 +10,5 @@ export default async function LibraryPage({
   const { lang } = await params;
   const dict = await getDictionary(lang);
 
-  return <LibraryPageClient translations={dict.library} lang={lang} />;
+  return <LibraryPageClient translations={{ ...dict.library, common: dict.common, libraryDetail: dict.libraryDetail }} lang={lang} />;
 }

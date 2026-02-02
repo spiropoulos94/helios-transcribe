@@ -88,11 +88,13 @@ function SegmentCard({
     }
 
     if (isSelected) {
-      return `${baseClasses} bg-indigo-50 border-indigo-400 shadow-md ring-2 ring-indigo-200`;
+      // Bold purple/violet styling for selected state - clearly distinct from approved (soft blue)
+      return `${baseClasses} bg-violet-100 border-violet-500 shadow-lg ring-2 ring-violet-300`;
     }
 
     if (approval.approved) {
-      return `${baseClasses} bg-blue-50 border-blue-300 shadow-sm`;
+      // Soft blue/green styling for approved state
+      return `${baseClasses} bg-emerald-50 border-emerald-200 shadow-sm`;
     }
 
     if (isHighlighted && isPlaying) {

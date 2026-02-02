@@ -192,7 +192,11 @@
     "hr": "hr",
     "words": "words",
     "models": "models",
-    "succeeded": "succeeded"
+    "succeeded": "succeeded",
+    "justNow": "Just now",
+    "minAgo": "m ago",
+    "hourAgo": "h ago",
+    "dayAgo": "d ago"
   },
   "editor": {
     "draft": "Draft",

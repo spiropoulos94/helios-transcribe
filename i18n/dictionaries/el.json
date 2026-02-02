@@ -192,7 +192,11 @@
     "hr": "ώρα",
     "words": "λέξεις",
     "models": "μοντέλα",
-    "succeeded": "έτοιμα"
+    "succeeded": "έτοιμα",
+    "justNow": "Μόλις τώρα",
+    "minAgo": "λ πριν",
+    "hourAgo": "ω πριν",
+    "dayAgo": "μ πριν"
   },
   "editor": {
     "draft": "Πρόχειρο",
