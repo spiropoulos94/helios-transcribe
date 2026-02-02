@@ -134,15 +134,10 @@ const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
     // No audio file provided
     if (!audioFileId) {
       return (
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <div className="flex items-center gap-3 text-slate-500">
-            <AlertCircle className="w-5 h-5" />
-            <div>
-              <p className="font-medium">{t?.editor?.noAudioFile || 'No audio file available'}</p>
-              <p className="text-sm text-slate-400 mt-1">
-                {t?.editor?.noAudioDescription || "This transcription doesn't have an associated audio file"}
-              </p>
-            </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="flex items-center gap-2 text-slate-500">
+            <AlertCircle className="w-4 h-4" />
+            <p className="text-sm">{t?.editor?.noAudioFile || 'No audio file available'}</p>
           </div>
         </div>
       );
@@ -151,10 +146,10 @@ const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
     // Loading state
     if (isLoading) {
       return (
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <div className="flex items-center gap-3 text-slate-600">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <p>{t?.editor?.loadingAudio || 'Loading audio...'}</p>
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="flex items-center gap-2 text-slate-600">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <p className="text-sm">{t?.editor?.loadingAudio || 'Loading audio...'}</p>
           </div>
         </div>
       );
@@ -163,21 +158,18 @@ const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
     // Error state
     if (error) {
       return (
-        <div className="bg-white rounded-xl border border-red-200 p-6">
-          <div className="flex items-center gap-3 text-red-600">
-            <AlertCircle className="w-5 h-5" />
-            <div>
-              <p className="font-medium">{t?.editor?.errorLoadingAudio || 'Error loading audio'}</p>
-              <p className="text-sm text-red-500 mt-1">{error}</p>
-            </div>
+        <div className="bg-white rounded-xl border border-red-200 p-4">
+          <div className="flex items-center gap-2 text-red-600">
+            <AlertCircle className="w-4 h-4" />
+            <p className="text-sm">{error}</p>
           </div>
         </div>
       );
     }
 
     return (
-      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-        {/* Hidden audio element with custom controls */}
+      <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+        {/* Hidden audio element */}
         {audioUrl && (
           <audio
             ref={ref}
@@ -191,45 +183,43 @@ const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
           />
         )}
 
-        {/* Play/Pause Button */}
-        <div className="flex items-center justify-center">
+        {/* Main controls row: Play + Timeline */}
+        <div className="flex items-center gap-3">
           <button
             onClick={handlePlayPause}
-            className="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-colors shadow-lg shadow-blue-600/20"
+            className="w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-colors shadow-md shadow-blue-600/20 shrink-0"
             disabled={!audioUrl}
           >
-            {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
+            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
           </button>
-        </div>
-
-        {/* Timeline / Seek Bar */}
-        <div className="space-y-2">
-          <input
-            type="range"
-            min="0"
-            max={duration || 0}
-            value={currentTime}
-            onChange={handleSeek}
-            className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:cursor-pointer"
-            disabled={!audioUrl}
-          />
-          <div className="flex justify-between text-sm text-slate-600">
-            <span>{formatTimestamp(currentTime)}</span>
-            <span>{formatTimestamp(duration)}</span>
+          <div className="flex-1 space-y-1">
+            <input
+              type="range"
+              min="0"
+              max={duration || 0}
+              value={currentTime}
+              onChange={handleSeek}
+              className="w-full h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:cursor-pointer"
+              disabled={!audioUrl}
+            />
+            <div className="flex justify-between text-xs text-slate-500">
+              <span>{formatTimestamp(currentTime)}</span>
+              <span>{formatTimestamp(duration)}</span>
+            </div>
           </div>
         </div>
 
-        {/* Playback Speed Controls */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-slate-600">{t?.editor?.speed || 'Speed'}</p>
-          <div className="flex gap-2">
+        {/* Secondary controls row: Speed + Volume */}
+        <div className="flex items-center justify-between gap-4">
+          {/* Playback Speed */}
+          <div className="flex items-center gap-1.5">
             {[0.5, 1, 1.5, 2].map((rate) => (
               <button
                 key={rate}
                 onClick={() => handlePlaybackRateChange(rate)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
                   playbackRate === rate
-                    ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                    ? 'bg-blue-100 text-blue-700'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
                 disabled={!audioUrl}
@@ -238,12 +228,10 @@ const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Volume Control */}
-        <div className="space-y-2">
+          {/* Volume */}
           <div className="flex items-center gap-2">
-            <Volume2 className="w-4 h-4 text-slate-600" />
+            <Volume2 className="w-3.5 h-3.5 text-slate-500" />
             <input
               type="range"
               min="0"
@@ -251,10 +239,9 @@ const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
               step="0.1"
               value={volume}
               onChange={handleVolumeChange}
-              className="flex-1 h-2 bg-slate-200 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:cursor-pointer"
+              className="w-16 h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:cursor-pointer"
               disabled={!audioUrl}
             />
-            <span className="text-xs text-slate-600 w-8">{Math.round(volume * 100)}%</span>
           </div>
         </div>
       </div>

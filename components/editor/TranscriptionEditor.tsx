@@ -178,24 +178,22 @@ export default function TranscriptionEditor({
       />
 
       {/* Main Content */}
-      <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Sidebar: Audio Player + Speaker Legend */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="lg:sticky lg:top-32 space-y-6">
-              <AudioPlayer
-                ref={audioRef}
-                audioFileId={editorState.audioFileId}
-                onTimeUpdate={handleTimeUpdate}
-                onPlayingChange={setIsPlaying}
-                translations={t}
-              />
-              <SpeakerLegend segments={segments} translations={t} />
-            </div>
+      <div className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-8 overflow-hidden">
+        <div className="h-full flex flex-col lg:flex-row gap-6">
+          {/* Left Sidebar: Audio Player + Speaker Legend - Fixed width */}
+          <div className="lg:w-80 shrink-0 space-y-4">
+            <AudioPlayer
+              ref={audioRef}
+              audioFileId={editorState.audioFileId}
+              onTimeUpdate={handleTimeUpdate}
+              onPlayingChange={setIsPlaying}
+              translations={t}
+            />
+            <SpeakerLegend segments={segments} translations={t} />
           </div>
 
-          {/* Right: Segment List */}
-          <div className="lg:col-span-8">
+          {/* Right: Segment List - Takes remaining width */}
+          <div className="flex-1 min-w-0 overflow-y-auto">
             <SegmentList
               segments={segments}
               approvals={editorState.approvals}
