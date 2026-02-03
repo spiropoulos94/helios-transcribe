@@ -21,7 +21,6 @@ interface SegmentListProps {
   onTimestampClick: (segment: TranscriptionSegment) => void;
   onSelect: (index: number | null) => void;
   onEditRequestHandled: () => void;
-  translations?: any;
 }
 
 export default function SegmentList({
@@ -38,15 +37,14 @@ export default function SegmentList({
   onTimestampClick,
   onSelect,
   onEditRequestHandled,
-  translations,
 }: SegmentListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
     count: segments.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 172, // Estimated height per segment card (160px card + 12px padding)
-    overscan: 5, // Render 5 extra items above/below viewport
+    estimateSize: () => 172,
+    overscan: 5,
   });
 
   // Scroll to highlighted segment when it changes (during playback)
@@ -120,7 +118,6 @@ export default function SegmentList({
                   onTimestampClick={onTimestampClick}
                   onSelect={onSelect}
                   onEditRequestHandled={onEditRequestHandled}
-                  translations={translations}
                 />
               </div>
             </div>

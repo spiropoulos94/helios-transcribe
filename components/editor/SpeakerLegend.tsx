@@ -4,15 +4,16 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { TranscriptionSegment } from '@/lib/ai/types';
 import { getAllSpeakersWithColors } from '@/lib/editor/speakerColors';
+import { useTranslations } from '@/contexts/TranslationsContext';
 
 interface SpeakerLegendProps {
   segments: TranscriptionSegment[];
-  translations?: any;
 }
 
 const COLLAPSED_COUNT = 4;
 
-export default function SpeakerLegend({ segments, translations: t }: SpeakerLegendProps) {
+export default function SpeakerLegend({ segments }: SpeakerLegendProps) {
+  const { t } = useTranslations();
   const [isExpanded, setIsExpanded] = useState(false);
   const speakersWithColors = getAllSpeakersWithColors(segments);
 
@@ -27,7 +28,7 @@ export default function SpeakerLegend({ segments, translations: t }: SpeakerLege
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4">
       <h3 className="text-sm font-semibold text-slate-900 mb-3">
-        {t?.editor?.speakers || 'Speakers'} ({speakersWithColors.length})
+        {t.editor?.speakers || 'Speakers'} ({speakersWithColors.length})
       </h3>
       <div
         className="grid grid-cols-2 gap-x-4 gap-y-2 overflow-hidden transition-all duration-300 ease-in-out"
@@ -53,8 +54,8 @@ export default function SpeakerLegend({ segments, translations: t }: SpeakerLege
             className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
           />
           {isExpanded
-            ? (t?.editor?.showLess || 'Show less')
-            : (t?.editor?.showMore || `Show ${hiddenCount} more`)}
+            ? (t.editor?.showLess || 'Show less')
+            : (t.editor?.showMore || `Show ${hiddenCount} more`)}
         </button>
       )}
     </div>

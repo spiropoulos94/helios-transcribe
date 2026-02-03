@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect, memo } from 'react';
-import { Check, Edit2, X, Save } from 'lucide-react';
+import { useState, useEffect, memo } from 'react';
+import { Edit2 } from 'lucide-react';
 import { TranscriptionSegment } from '@/lib/ai/types';
 import { SegmentApproval } from '@/lib/transcriptionStorage';
-import { ColorScheme, formatTimestamp } from '@/lib/editor/speakerColors';
+import { ColorScheme } from '@/lib/editor/speakerColors';
+import { useTranslations } from '@/contexts/TranslationsContext';
+import SegmentHeader from './SegmentHeader';
+import SegmentEditForm from './SegmentEditForm';
 
 interface SegmentCardProps {
   segment: TranscriptionSegment;
@@ -21,39 +24,16 @@ interface SegmentCardProps {
   onTimestampClick: (segment: TranscriptionSegment) => void;
   onSelect: (index: number | null) => void;
   onEditRequestHandled: () => void;
-  translations?: any;
 }
 
 function SegmentCard({
-  segment,
-  index,
-  approval,
-  isHighlighted,
-  isSelected,
-  isPlaying,
-  isEditRequested,
-  speakerColor,
-  onApprove,
-  onUnapprove,
-  onEdit,
-  onTimestampClick,
-  onSelect,
-  onEditRequestHandled,
-  translations: t,
+  segment, index, approval, isHighlighted, isSelected, isPlaying, isEditRequested,
+  speakerColor, onApprove, onUnapprove, onEdit, onTimestampClick, onSelect, onEditRequestHandled,
 }: SegmentCardProps) {
+  const { t } = useTranslations();
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(approval.editedText || segment.text);
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-focus textarea when entering edit mode
-  useEffect(() => {
-    if (isEditing && textAreaRef.current) {
-      textAreaRef.current.focus();
-      textAreaRef.current.select();
-    }
-  }, [isEditing]);
-
-  // Handle edit request from keyboard shortcut
   useEffect(() => {
     if (isEditRequested && isSelected && !approval.approved && !isEditing) {
       setIsEditing(true);
@@ -72,137 +52,50 @@ function SegmentCard({
   };
 
   const handleApproveToggle = () => {
-    if (approval.approved) {
-      onUnapprove(index);
-    } else {
-      onApprove(index);
-    }
+    approval.approved ? onUnapprove(index) : onApprove(index);
   };
 
-  // Determine card styling based on state
   const getCardClasses = () => {
-    const baseClasses = 'rounded-xl border-2 p-3 sm:p-4 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 cursor-pointer';
-
-    if (isEditing) {
-      return `${baseClasses} bg-yellow-50 border-yellow-400 shadow-md`;
-    }
-
-    if (isSelected) {
-      // Bold purple/violet styling for selected state - clearly distinct from approved (soft blue)
-      return `${baseClasses} bg-violet-100 border-violet-500 shadow-lg ring-2 ring-violet-300`;
-    }
-
-    if (approval.approved) {
-      // Soft blue/green styling for approved state
-      return `${baseClasses} bg-emerald-50 border-emerald-200 shadow-sm`;
-    }
-
-    if (isHighlighted && isPlaying) {
-      return `${baseClasses} bg-white border-blue-400 shadow-lg playing-segment`;
-    }
-
-    return `${baseClasses} bg-white border-slate-200 hover:border-slate-300 hover:shadow-md`;
+    const base = 'rounded-xl border-2 p-3 sm:p-4 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 cursor-pointer';
+    if (isEditing) return `${base} bg-yellow-50 border-yellow-400 shadow-md`;
+    if (isSelected) return `${base} bg-violet-100 border-violet-500 shadow-lg ring-2 ring-violet-300`;
+    if (approval.approved) return `${base} bg-emerald-50 border-emerald-200 shadow-sm`;
+    if (isHighlighted && isPlaying) return `${base} bg-white border-blue-400 shadow-lg playing-segment`;
+    return `${base} bg-white border-slate-200 hover:border-slate-300 hover:shadow-md`;
   };
 
   const displayText = approval.editedText || segment.text;
   const hasBeenEdited = approval.editedText !== undefined && approval.editedText !== segment.text;
 
   return (
-    <div
-      className={getCardClasses()}
-      onClick={() => onSelect(index)}
-    >
-      {/* Header: Speaker, Timestamp, Approval Status */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-3">
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          {/* Speaker Badge */}
-          <span
-            className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-md text-xs sm:text-sm font-medium ${speakerColor.bg} ${speakerColor.text} ${speakerColor.border} border`}
-          >
-            {segment.speaker}
-          </span>
+    <div className={getCardClasses()} onClick={() => onSelect(index)}>
+      <SegmentHeader
+        segment={segment}
+        approval={approval}
+        speakerColor={speakerColor}
+        hasBeenEdited={hasBeenEdited}
+        isEditing={isEditing}
+        onApproveToggle={handleApproveToggle}
+        onTimestampClick={() => onTimestampClick(segment)}
+      />
 
-          {/* Timestamp (clickable) */}
-          <button
-            onClick={() => onTimestampClick(segment)}
-            className="text-xs sm:text-sm text-slate-500 hover:text-blue-600 transition-colors font-mono"
-            title={t?.editor?.clickToJump || "Click to jump to this timestamp"}
-          >
-            {formatTimestamp(segment.startTime)} - {formatTimestamp(segment.endTime)}
-          </button>
-
-          {/* Edited Badge */}
-          {hasBeenEdited && !isEditing && (
-            <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 text-[10px] sm:text-xs font-medium">
-              {t?.editor?.edited || 'Edited'}
-            </span>
-          )}
-        </div>
-
-        {/* Approval Checkbox/Icon */}
-        <button
-          onClick={handleApproveToggle}
-          className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors self-start sm:self-auto ${
-            approval.approved
-              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-          disabled={isEditing}
-        >
-          {approval.approved ? (
-            <>
-              <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>{t?.editor?.approved || 'Approved'}</span>
-            </>
-          ) : (
-            <>
-              <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-slate-400 rounded" />
-              <span>{t?.editor?.approve || 'Approve'}</span>
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Content: Text or Textarea */}
       {isEditing ? (
-        <div className="space-y-3">
-          <textarea
-            ref={textAreaRef}
-            value={editedText}
-            onChange={(e) => setEditedText(e.target.value)}
-            className="w-full px-3 py-2 border border-yellow-300 rounded-lg text-sm sm:text-base text-slate-700 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            rows={3}
-            style={{ minHeight: '80px' }}
-          />
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleSaveEdit}
-              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs sm:text-sm font-medium"
-            >
-              <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              {t?.editor?.save || t?.common?.save || 'Save'}
-            </button>
-            <button
-              onClick={handleCancelEdit}
-              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors text-xs sm:text-sm font-medium"
-            >
-              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              {t?.editor?.cancel || t?.common?.cancel || 'Cancel'}
-            </button>
-          </div>
-        </div>
+        <SegmentEditForm
+          editedText={editedText}
+          onTextChange={setEditedText}
+          onSave={handleSaveEdit}
+          onCancel={handleCancelEdit}
+        />
       ) : (
         <div className="space-y-2 sm:space-y-3">
           <p className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap">{displayText}</p>
-
-          {/* Edit Button */}
           {!approval.approved && (
             <button
               onClick={() => setIsEditing(true)}
               className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             >
               <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              {t?.editor?.edit || t?.common?.edit || 'Edit'}
+              {t.editor?.edit || t.common?.edit || 'Edit'}
             </button>
           )}
         </div>

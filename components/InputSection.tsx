@@ -1,15 +1,16 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, Youtube, FileAudio, AlertCircle, Info } from 'lucide-react';
+import { UploadCloud, Youtube, FileAudio, Info } from 'lucide-react';
 import { UploadConfig } from '../types';
 import { featureFlags } from '@/lib/config';
+import { useTranslations } from '@/contexts/TranslationsContext';
 
 interface InputSectionProps {
   onStartProcessing: (config: UploadConfig) => void;
   isProcessing: boolean;
-  translations: any;
 }
 
-export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, isProcessing, translations: t }) => {
+export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, isProcessing }) => {
+  const { t } = useTranslations();
   const [activeTab, setActiveTab] = useState<'file' | 'url'>('file');
   const [url, setUrl] = useState('');
   const [dragActive, setDragActive] = useState(false);
@@ -66,7 +67,7 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
             }`}
           >
             <UploadCloud className="w-4 h-4" />
-            {t.uploadFile}
+            {t.inputSection.uploadFile}
           </button>
           <button
             onClick={() => setActiveTab('url')}
@@ -82,10 +83,10 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
             }`}
           >
             <Youtube className="w-4 h-4" />
-            {t.youtubeUrl}
+            {t.inputSection.youtubeUrl}
             {isYoutubeDisabled && (
               <span className="absolute top-1 right-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-                {t.comingSoon}
+                {t.inputSection.comingSoon}
               </span>
             )}
           </button>
@@ -119,10 +120,10 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
               </div>
 
               <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                {t.dragDrop}
+                {t.inputSection.dragDrop}
               </h3>
               <p className="text-sm text-slate-500 mb-2 max-w-xs">
-                {t.supportedFormats}: MP3, WAV, MP4, MOV <br/> {t.maxFileSize}: 500MB
+                {t.inputSection.supportedFormats}: MP3, WAV, MP4, MOV <br/> {t.inputSection.maxFileSize}: 500MB
               </p>
 
               <div className="flex items-start gap-2 mb-6 px-4 py-3 bg-blue-50 border border-blue-100 rounded-lg max-w-md">
@@ -137,7 +138,7 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
                 disabled={isProcessing}
                 className="px-6 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 focus:ring-4 focus:ring-slate-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isProcessing ? t.processing : t.browse}
+                {isProcessing ? t.inputSection.processing : t.inputSection.browse}
               </button>
             </div>
           ) : (
@@ -148,7 +149,7 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
                 </div>
                 <input
                   type="url"
-                  placeholder={t.placeholder}
+                  placeholder={t.inputSection.placeholder}
                   className="block w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all disabled:bg-slate-50 disabled:cursor-not-allowed"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
@@ -165,7 +166,7 @@ export const InputSection: React.FC<InputSectionProps> = ({ onStartProcessing, i
                     : 'bg-red-600 text-white hover:bg-red-700 focus:ring-4 focus:ring-red-100 disabled:opacity-50 disabled:cursor-not-allowed shadow-red-600/20'
                 }`}
               >
-                {isYoutubeDisabled ? t.comingSoon : isProcessing ? t.processing : t.transcribe}
+                {isYoutubeDisabled ? t.inputSection.comingSoon : isProcessing ? t.inputSection.processing : t.inputSection.transcribe}
               </button>
             </form>
           )}
