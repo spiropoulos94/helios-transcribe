@@ -68,7 +68,10 @@ function SegmentCard({
   const hasBeenEdited = approval.editedText !== undefined && approval.editedText !== segment.text;
 
   return (
-    <div className={getCardClasses()} onClick={() => onSelect(index)}>
+    <div className={getCardClasses()} onClick={() => {
+      onSelect(index);
+      onTimestampClick(segment);
+    }}>
       <SegmentHeader
         segment={segment}
         approval={approval}

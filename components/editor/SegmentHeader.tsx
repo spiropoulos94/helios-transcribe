@@ -33,7 +33,10 @@ export default function SegmentHeader({
         </span>
 
         <button
-          onClick={onTimestampClick}
+          onClick={(e) => {
+            e.stopPropagation();
+            onTimestampClick();
+          }}
           className="text-xs sm:text-sm text-slate-500 hover:text-blue-600 transition-colors font-mono"
           title={t.editor?.clickToJump || "Click to jump to this timestamp"}
         >
