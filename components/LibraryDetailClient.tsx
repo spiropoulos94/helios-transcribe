@@ -13,7 +13,7 @@ interface LibraryDetailClientProps {
 
 export default function LibraryDetailClient({ id }: LibraryDetailClientProps) {
   const { t, lang } = useTranslations();
-  const { transcription, previousId, nextId, isLoading } = useTranscriptionDetail(id);
+  const { transcription, isLoading } = useTranscriptionDetail(id);
 
   if (isLoading) {
     return (
@@ -53,11 +53,5 @@ export default function LibraryDetailClient({ id }: LibraryDetailClientProps) {
     return <TranscriptionEditor transcription={transcription} />;
   }
 
-  return (
-    <LegacyTranscriptView
-      transcription={transcription}
-      previousId={previousId}
-      nextId={nextId}
-    />
-  );
+  return <LegacyTranscriptView transcription={transcription} />;
 }

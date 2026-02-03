@@ -7,12 +7,27 @@ interface UseAudioLoaderReturn {
   error: string | null;
 }
 
+/**
+ * Hook for loading audio files from IndexedDB.
+ *
+ * Retrieves the audio blob from IndexedDB by its ID and creates an object URL
+ * for use with the HTML audio element. Handles cleanup of the object URL
+ * when the component unmounts or the audioFileId changes.
+ *
+ * @param audioFileId - The ID of the audio file stored in IndexedDB
+ * @returns Object containing audioUrl, loading state, and error message
+ *
+ * @example
+ * const { audioUrl, isLoading, error } = useAudioLoader(transcription.audioFileId);
+ * // Use audioUrl as src for <audio> element
+ */
 export function useAudioLoader(audioFileId?: string): UseAudioLoaderReturn {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Skip loading if no audio file ID provided
     if (!audioFileId) {
       setIsLoading(false);
       return;
@@ -24,6 +39,8 @@ export function useAudioLoader(audioFileId?: string): UseAudioLoaderReturn {
       try {
         setIsLoading(true);
         setError(null);
+
+        // Fetch audio blob from IndexedDB
         const blob = await getAudioFile(audioFileId);
 
         if (!blob) {
@@ -32,6 +49,7 @@ export function useAudioLoader(audioFileId?: string): UseAudioLoaderReturn {
           return;
         }
 
+        // Create object URL for the audio element
         objectUrl = URL.createObjectURL(blob);
         setAudioUrl(objectUrl);
         setIsLoading(false);
@@ -44,6 +62,7 @@ export function useAudioLoader(audioFileId?: string): UseAudioLoaderReturn {
 
     loadAudio();
 
+    // Cleanup: revoke object URL to free memory
     return () => {
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);

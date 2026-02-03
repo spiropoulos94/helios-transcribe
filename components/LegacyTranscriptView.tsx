@@ -13,9 +13,7 @@ import {
   Calendar,
   FileAudio,
   Hash,
-  Clock,
-  ChevronLeft,
-  ChevronRight
+  Clock
 } from 'lucide-react';
 import { SavedTranscription, deleteTranscription } from '@/lib/transcriptionStorage';
 import { calculateTranscriptionCost } from '@/lib/pricing/calculator';
@@ -23,14 +21,10 @@ import { useTranslations } from '@/contexts/TranslationsContext';
 
 interface LegacyTranscriptViewProps {
   transcription: SavedTranscription;
-  previousId: string | null;
-  nextId: string | null;
 }
 
 export default function LegacyTranscriptView({
   transcription,
-  previousId,
-  nextId,
 }: LegacyTranscriptViewProps) {
   const { t, lang } = useTranslations();
   const router = useRouter();
@@ -101,36 +95,11 @@ export default function LegacyTranscriptView({
     <div className="flex-1 bg-linear-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Navigation Bar */}
-        <div className="flex items-center justify-between mb-6 animate-in fade-in slide-in-from-bottom-4">
+        <div className="flex items-center mb-6 animate-in fade-in slide-in-from-bottom-4">
           <Link href={`/${lang}/library`} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
             <ArrowLeft className="w-4 h-4" />
             {t.libraryDetail?.backToLibrary}
           </Link>
-
-          <div className="flex items-center gap-2">
-            {previousId ? (
-              <Link href={`/${lang}/library/${previousId}`} className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">
-                <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">{t.libraryDetail?.previous}</span>
-              </Link>
-            ) : (
-              <button disabled className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-300 cursor-not-allowed rounded-lg">
-                <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">{t.libraryDetail?.previous}</span>
-              </button>
-            )}
-            {nextId ? (
-              <Link href={`/${lang}/library/${nextId}`} className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">
-                <span className="hidden sm:inline">{t.libraryDetail?.next}</span>
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            ) : (
-              <button disabled className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-300 cursor-not-allowed rounded-lg">
-                <span className="hidden sm:inline">{t.libraryDetail?.next}</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            )}
-          </div>
         </div>
 
         {/* Main Content Card */}

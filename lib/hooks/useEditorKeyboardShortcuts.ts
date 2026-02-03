@@ -11,15 +11,39 @@ interface KeyboardShortcutsConfig {
 }
 
 /**
- * Keyboard shortcuts for the transcription editor
+ * Hook for handling keyboard shortcuts in the transcription editor.
  *
- * Shortcuts:
- * - A: Toggle approve on selected segment
- * - E: Enter edit mode on selected segment
+ * Provides vim-style keyboard navigation and quick actions for efficient
+ * transcription review workflow. Automatically disables shortcuts when
+ * the user is typing in an input field (except for Escape).
+ *
+ * Keyboard Shortcuts:
+ * - A: Toggle approve on selected/highlighted segment
+ * - E: Enter edit mode on selected/highlighted segment
  * - J / ArrowDown: Select next segment
  * - K / ArrowUp: Select previous segment
- * - Space: Play/pause audio
+ * - Space: Play/pause audio playback
  * - Escape: Cancel editing / clear selection
+ *
+ * @param config - Configuration object with callback handlers
+ * @param config.onApprove - Called when A is pressed
+ * @param config.onEdit - Called when E is pressed
+ * @param config.onNextSegment - Called when J or ArrowDown is pressed
+ * @param config.onPrevSegment - Called when K or ArrowUp is pressed
+ * @param config.onPlayPause - Called when Space is pressed
+ * @param config.onEscape - Called when Escape is pressed
+ * @param config.enabled - Whether shortcuts are active (default: true)
+ *
+ * @example
+ * useEditorKeyboardShortcuts({
+ *   onApprove: () => handleApprove(selectedIndex),
+ *   onEdit: () => setIsEditing(true),
+ *   onNextSegment: () => setSelectedIndex(prev => prev + 1),
+ *   onPrevSegment: () => setSelectedIndex(prev => prev - 1),
+ *   onPlayPause: () => audioRef.current?.paused ? play() : pause(),
+ *   onEscape: () => setSelectedIndex(null),
+ *   enabled: !isModalOpen,
+ * });
  */
 export function useEditorKeyboardShortcuts({
   onApprove,
@@ -34,12 +58,13 @@ export function useEditorKeyboardShortcuts({
     (e: KeyboardEvent) => {
       if (!enabled) return;
 
-      // Don't intercept when typing in inputs (except for Escape)
+      // Check if user is typing in an input field
       const target = e.target as HTMLElement;
       const isTyping = target instanceof HTMLInputElement ||
                        target instanceof HTMLTextAreaElement ||
                        target.isContentEditable;
 
+      // Allow Escape even when typing (to cancel editing)
       if (isTyping) {
         if (e.key === 'Escape') {
           e.preventDefault();
@@ -51,6 +76,7 @@ export function useEditorKeyboardShortcuts({
       switch (e.key) {
         case 'a':
         case 'A':
+          // Toggle approve (ignore if modifier keys are pressed)
           if (!e.metaKey && !e.ctrlKey && !e.altKey) {
             e.preventDefault();
             onApprove();
@@ -59,6 +85,7 @@ export function useEditorKeyboardShortcuts({
 
         case 'e':
         case 'E':
+          // Enter edit mode (ignore if modifier keys are pressed)
           if (!e.metaKey && !e.ctrlKey && !e.altKey) {
             e.preventDefault();
             onEdit();
@@ -67,23 +94,26 @@ export function useEditorKeyboardShortcuts({
 
         case 'j':
         case 'ArrowDown':
+          // Navigate to next segment
           e.preventDefault();
           onNextSegment();
           break;
 
         case 'k':
         case 'ArrowUp':
+          // Navigate to previous segment
           e.preventDefault();
           onPrevSegment();
           break;
 
         case ' ':
-          // Only handle space when not in an input
+          // Toggle audio playback
           e.preventDefault();
           onPlayPause();
           break;
 
         case 'Escape':
+          // Clear selection or cancel editing
           e.preventDefault();
           onEscape();
           break;
@@ -92,6 +122,7 @@ export function useEditorKeyboardShortcuts({
     [enabled, onApprove, onEdit, onNextSegment, onPrevSegment, onPlayPause, onEscape]
   );
 
+  // Register keyboard event listener
   useEffect(() => {
     if (!enabled) return;
 

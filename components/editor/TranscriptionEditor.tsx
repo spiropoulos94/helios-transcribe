@@ -5,7 +5,6 @@ import { SavedTranscription } from '@/lib/transcriptionStorage';
 import { SPEAKER_COLORS, ColorScheme } from '@/lib/editor/speakerColors';
 import { useEditorKeyboardShortcuts } from '@/lib/hooks/useEditorKeyboardShortcuts';
 import { useEditorState } from '@/lib/hooks/useEditorState';
-import { useSegmentNavigation } from '@/lib/hooks/useSegmentNavigation';
 import { useAudioSync } from '@/lib/hooks/useAudioSync';
 import { useTranslations } from '@/contexts/TranslationsContext';
 import EditorHeader from './EditorHeader';
@@ -36,8 +35,6 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
   // Custom hooks
   const { editorState, handleApprove, handleUnapprove, handleEdit, handleFinalize, approvedCount } =
     useEditorState(transcription, () => alert(t.editor?.finalizeSuccess || 'Transcription finalized successfully!'));
-
-  const { previousId, nextId } = useSegmentNavigation(transcription.id);
 
   const {
     isPlaying,
@@ -137,8 +134,6 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
           editorState={editorState}
           totalSegments={segments.length}
           approvedCount={approvedCount}
-          previousId={previousId}
-          nextId={nextId}
           onFinalize={handleFinalize}
           onExport={handleExport}
         />

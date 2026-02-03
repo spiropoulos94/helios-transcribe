@@ -12,6 +12,31 @@ interface UseTranscriptionReturn {
   resetApp: () => void;
 }
 
+/**
+ * Hook for managing the transcription workflow.
+ *
+ * Handles the complete transcription process including:
+ * - File upload or YouTube URL processing
+ * - API calls to the transcription endpoint
+ * - Saving results to IndexedDB
+ * - Storing the original audio file for playback in the editor
+ * - Error handling and state management
+ *
+ * Supports two modes:
+ * 1. File upload: User uploads an audio/video file
+ * 2. YouTube URL: User provides a YouTube video URL (when enabled)
+ *
+ * @returns Transcription state and handler functions
+ *
+ * @example
+ * const { status, results, handleStartProcessing, resetApp } = useTranscription();
+ *
+ * // Start transcription
+ * await handleStartProcessing({ mode: 'file', file: audioFile });
+ *
+ * // Reset to initial state
+ * resetApp();
+ */
 export function useTranscription(): UseTranscriptionReturn {
   const [status, setStatus] = useState<AppStatus>(AppStatus.IDLE);
   const [results, setResults] = useState<TranscriptionResult[] | null>(null);
@@ -57,6 +82,7 @@ export function useTranscription(): UseTranscriptionReturn {
       setCurrentFileName(config.file.name);
 
       try {
+        // Send file to transcription API
         const formData = new FormData();
         formData.append('file', config.file);
 
@@ -74,13 +100,15 @@ export function useTranscription(): UseTranscriptionReturn {
         setResults(data.results);
         setStatus(AppStatus.COMPLETED);
 
+        // Save transcription results to IndexedDB
         const savedTranscriptions = await saveMultiModelTranscriptions(data.results);
 
-        // Save audio file to IndexedDB and link it to transcriptions
+        // Save audio file to IndexedDB and link it to transcriptions for editor playback
         if (config.file) {
           try {
             const audioFileId = await saveAudioFile(config.file, undefined, config.file.name);
 
+            // Update each transcription with the audio file reference
             for (const transcription of savedTranscriptions) {
               await updateTranscriptionEditorState(transcription.id, {
                 approvals: transcription.metadata?.structuredData?.segments.map((_, index) => ({
@@ -106,6 +134,7 @@ export function useTranscription(): UseTranscriptionReturn {
     }
   };
 
+  // Reset app to initial idle state
   const resetApp = () => {
     setStatus(AppStatus.IDLE);
     setResults(null);

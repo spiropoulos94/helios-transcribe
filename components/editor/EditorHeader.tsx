@@ -13,8 +13,6 @@ interface EditorHeaderProps {
   editorState: TranscriptionEditorState;
   totalSegments: number;
   approvedCount: number;
-  previousId: string | null;
-  nextId: string | null;
   onFinalize: () => void;
   onExport: () => void;
 }
