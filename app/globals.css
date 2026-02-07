@@ -128,3 +128,25 @@
 .playing-segment {
   animation: pulse-border 2s ease-in-out infinite;
 }
+
+/* Marching ants animation for now-playing segment */
+.marching-ants {
+  background:
+    linear-gradient(90deg, #2676e3 50%, transparent 50%) top,
+    linear-gradient(90deg, #2676e3 50%, transparent 50%) bottom,
+    linear-gradient(0deg, #2676e3 50%, transparent 50%) left,
+    linear-gradient(0deg, #2676e3 50%, transparent 50%) right;
+  background-size: 12px 3px, 12px 3px, 3px 12px, 3px 12px;
+  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  animation: marching-ants 0.5s linear infinite;
+  border: none !important;
+}
+
+@keyframes marching-ants {
+  0% {
+    background-position: 0 0, 100% 100%, 0 100%, 100% 0;
+  }
+  100% {
+    background-position: 12px 0, calc(100% - 12px) 100%, 0 calc(100% - 12px), 100% 12px;
+  }
+}

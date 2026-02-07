@@ -34,9 +34,13 @@ interface UseEditorStateReturn {
   editorState: TranscriptionEditorState;
   handleApprove: (segmentIndex: number) => void;
   handleUnapprove: (segmentIndex: number) => void;
+  handleApproveAll: () => void;
+  handleUnapproveAll: () => void;
   handleEdit: (segmentIndex: number, newText: string) => void;
   handleFinalize: () => void;
   approvedCount: number;
+  getNextUnapprovedIndex: (fromIndex?: number) => number | null;
+  getPrevUnapprovedIndex: (fromIndex?: number) => number | null;
 }
 
 /**
@@ -86,13 +90,31 @@ export function useEditorState(
     }));
   }, []);
 
-  // Remove approval from a segment
+  // Remove approval from a segment (reverts to draft if finalized)
   const handleUnapprove = useCallback((segmentIndex: number) => {
     setEditorState((prev) => ({
       ...prev,
+      isDraft: true, // Revert to draft when any segment is unapproved
       approvals: prev.approvals.map((a, i) =>
         i === segmentIndex ? { ...a, approved: false } : a
       ),
+    }));
+  }, []);
+
+  // Mark all segments as approved
+  const handleApproveAll = useCallback(() => {
+    setEditorState((prev) => ({
+      ...prev,
+      approvals: prev.approvals.map((a) => ({ ...a, approved: true })),
+    }));
+  }, []);
+
+  // Remove approval from all segments (reverts to draft if finalized)
+  const handleUnapproveAll = useCallback(() => {
+    setEditorState((prev) => ({
+      ...prev,
+      isDraft: true, // Revert to draft when segments are unapproved
+      approvals: prev.approvals.map((a) => ({ ...a, approved: false })),
     }));
   }, []);
 
@@ -120,12 +142,50 @@ export function useEditorState(
 
   const approvedCount = editorState.approvals.filter((a) => a.approved).length;
 
+  // Get the next unapproved segment index (searching forward from fromIndex)
+  const getNextUnapprovedIndex = useCallback((fromIndex?: number): number | null => {
+    const startIndex = fromIndex !== undefined ? fromIndex + 1 : 0;
+    for (let i = startIndex; i < editorState.approvals.length; i++) {
+      if (!editorState.approvals[i]?.approved) {
+        return i;
+      }
+    }
+    // Wrap around to beginning if not found
+    for (let i = 0; i < startIndex; i++) {
+      if (!editorState.approvals[i]?.approved) {
+        return i;
+      }
+    }
+    return null;
+  }, [editorState.approvals]);
+
+  // Get the previous unapproved segment index (searching backward from fromIndex)
+  const getPrevUnapprovedIndex = useCallback((fromIndex?: number): number | null => {
+    const startIndex = fromIndex !== undefined ? fromIndex - 1 : editorState.approvals.length - 1;
+    for (let i = startIndex; i >= 0; i--) {
+      if (!editorState.approvals[i]?.approved) {
+        return i;
+      }
+    }
+    // Wrap around to end if not found
+    for (let i = editorState.approvals.length - 1; i > startIndex; i--) {
+      if (!editorState.approvals[i]?.approved) {
+        return i;
+      }
+    }
+    return null;
+  }, [editorState.approvals]);
+
   return {
     editorState,
     handleApprove,
     handleUnapprove,
+    handleApproveAll,
+    handleUnapproveAll,
     handleEdit,
     handleFinalize,
     approvedCount,
+    getNextUnapprovedIndex,
+    getPrevUnapprovedIndex,
   };
 }

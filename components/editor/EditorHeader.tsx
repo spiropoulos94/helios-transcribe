@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { ArrowLeft, Download, Trash2, CheckCircle, Keyboard } from 'lucide-react';
+import { ArrowLeft, Download, Trash2, CheckCircle, Keyboard, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SavedTranscription, deleteTranscription, TranscriptionEditorState } from '@/lib/transcriptionStorage';
 import { useTranslations } from '@/contexts/TranslationsContext';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
+import BulkApprovalMenu from './BulkApprovalMenu';
 
 interface EditorHeaderProps {
   transcription: SavedTranscription;
@@ -15,11 +16,16 @@ interface EditorHeaderProps {
   approvedCount: number;
   onFinalize: () => void;
   onExport: () => void;
+  onApproveAll: () => void;
+  onUnapproveAll: () => void;
+  onNextUnapproved: () => void;
+  onPrevUnapproved: () => void;
+  hasUnapproved: boolean;
 }
 
 export default function EditorHeader({
   transcription, editorState, totalSegments, approvedCount,
-  onFinalize, onExport,
+  onFinalize, onExport, onApproveAll, onUnapproveAll, onNextUnapproved, onPrevUnapproved, hasUnapproved,
 }: EditorHeaderProps) {
   const { t, lang } = useTranslations();
   const router = useRouter();
@@ -38,7 +44,7 @@ export default function EditorHeader({
   return (
     <div className="bg-white border-b border-slate-200 shrink-0">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3">
-        {/* Row 1: Back Button + File Info + Actions */}
+        {/* Row 1: Back Button + File Info + Primary Actions */}
         <div className="flex items-center justify-between gap-2 sm:gap-3 mb-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <Link href={`/${lang}/library`} className="inline-flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors shrink-0">
@@ -56,7 +62,7 @@ export default function EditorHeader({
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Primary Action Buttons */}
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <div className="relative">
               <button onClick={() => setShowShortcuts(!showShortcuts)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title={t.editor?.keyboardShortcuts || 'Keyboard Shortcuts'}>
@@ -83,7 +89,7 @@ export default function EditorHeader({
         </div>
 
         {/* Row 2: Status Badge + Progress */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 mb-2">
           {editorState.isDraft ? (
             <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wide shrink-0">
               {t.editor?.draft || 'Draft'}
@@ -107,6 +113,51 @@ export default function EditorHeader({
             </div>
           </div>
         </div>
+
+        {/* Row 3: Navigation + Bulk Actions (only when draft) */}
+        {editorState.isDraft && (
+          <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+            {/* Navigation Controls for Unapproved Segments */}
+            {hasUnapproved ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">
+                  {t.editor?.navigateUnapproved || 'Navigate:'}
+                </span>
+                <div className="flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5">
+                  <button
+                    onClick={onPrevUnapproved}
+                    className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-white rounded-md transition-colors"
+                    title={t.editor?.prevUnapproved || 'Previous unapproved (P)'}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs text-slate-500 px-1">
+                    {t.editor?.unapproved || 'Unapproved'}
+                  </span>
+                  <button
+                    onClick={onNextUnapproved}
+                    className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-white rounded-md transition-colors"
+                    title={t.editor?.nextUnapproved || 'Next unapproved (N)'}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs text-green-600 font-medium">
+                {t.editor?.allApproved || 'All segments approved'}
+              </div>
+            )}
+
+            {/* Bulk Approval Menu */}
+            <BulkApprovalMenu
+              totalSegments={totalSegments}
+              approvedCount={approvedCount}
+              onApproveAll={onApproveAll}
+              onUnapproveAll={onUnapproveAll}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

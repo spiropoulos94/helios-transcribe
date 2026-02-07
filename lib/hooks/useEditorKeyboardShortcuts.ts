@@ -5,8 +5,11 @@ interface KeyboardShortcutsConfig {
   onEdit: () => void;
   onNextSegment: () => void;
   onPrevSegment: () => void;
+  onNextUnapproved: () => void;
+  onPrevUnapproved: () => void;
   onPlayPause: () => void;
   onEscape: () => void;
+  onSearch: () => void;
   enabled?: boolean;
 }
 
@@ -22,15 +25,21 @@ interface KeyboardShortcutsConfig {
  * - E: Enter edit mode on selected/highlighted segment
  * - J / ArrowDown: Select next segment
  * - K / ArrowUp: Select previous segment
+ * - N: Navigate to next unapproved segment
+ * - P: Navigate to previous unapproved segment
  * - Space: Play/pause audio playback
- * - Escape: Cancel editing / clear selection
+ * - / or Ctrl+F: Open search
+ * - Escape: Cancel editing / clear selection / close search
  *
  * @param config - Configuration object with callback handlers
  * @param config.onApprove - Called when A is pressed
  * @param config.onEdit - Called when E is pressed
  * @param config.onNextSegment - Called when J or ArrowDown is pressed
  * @param config.onPrevSegment - Called when K or ArrowUp is pressed
+ * @param config.onNextUnapproved - Called when N is pressed
+ * @param config.onPrevUnapproved - Called when P is pressed
  * @param config.onPlayPause - Called when Space is pressed
+ * @param config.onSearch - Called when / or Ctrl+F is pressed
  * @param config.onEscape - Called when Escape is pressed
  * @param config.enabled - Whether shortcuts are active (default: true)
  *
@@ -50,7 +59,10 @@ export function useEditorKeyboardShortcuts({
   onEdit,
   onNextSegment,
   onPrevSegment,
+  onNextUnapproved,
+  onPrevUnapproved,
   onPlayPause,
+  onSearch,
   onEscape,
   enabled = true,
 }: KeyboardShortcutsConfig) {
@@ -106,10 +118,45 @@ export function useEditorKeyboardShortcuts({
           onPrevSegment();
           break;
 
+        case 'n':
+        case 'N':
+          // Navigate to next unapproved segment
+          if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+            e.preventDefault();
+            onNextUnapproved();
+          }
+          break;
+
+        case 'p':
+        case 'P':
+          // Navigate to previous unapproved segment
+          if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+            e.preventDefault();
+            onPrevUnapproved();
+          }
+          break;
+
         case ' ':
           // Toggle audio playback
           e.preventDefault();
           onPlayPause();
+          break;
+
+        case '/':
+          // Open search (vim-style)
+          if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+            e.preventDefault();
+            onSearch();
+          }
+          break;
+
+        case 'f':
+        case 'F':
+          // Open search with Ctrl+F / Cmd+F
+          if (e.metaKey || e.ctrlKey) {
+            e.preventDefault();
+            onSearch();
+          }
           break;
 
         case 'Escape':
@@ -119,7 +166,7 @@ export function useEditorKeyboardShortcuts({
           break;
       }
     },
-    [enabled, onApprove, onEdit, onNextSegment, onPrevSegment, onPlayPause, onEscape]
+    [enabled, onApprove, onEdit, onNextSegment, onPrevSegment, onNextUnapproved, onPrevUnapproved, onPlayPause, onSearch, onEscape]
   );
 
   // Register keyboard event listener

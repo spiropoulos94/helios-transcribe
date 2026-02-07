@@ -1,100 +1,143 @@
 import { useState, useRef, useCallback } from 'react';
 import { TranscriptionSegment } from '@/lib/ai/types';
 
+interface SeekEvent {
+  segmentIndex: number;
+  id: number;
+}
+
 interface UseAudioSyncReturn {
   currentTime: number;
   isPlaying: boolean;
-  highlightedSegmentIndex: number | null;
-  selectedSegmentIndex: number | null;
+  activeSegmentIndex: number | null;
   isEditRequested: boolean;
+  seekEvent: SeekEvent | null;
   setIsPlaying: (playing: boolean) => void;
-  setSelectedSegmentIndex: React.Dispatch<React.SetStateAction<number | null>>;
   setIsEditRequested: (requested: boolean) => void;
   handleTimeUpdate: (time: number) => void;
-  handleTimestampClick: (
-    segment: TranscriptionSegment,
-    audioRef: React.RefObject<HTMLAudioElement | null>
-  ) => void;
+  handleSeek: (time: number) => void;
+  handleSegmentClick: (segment: TranscriptionSegment, audioRef: React.RefObject<HTMLAudioElement | null>) => void;
+  navigateToSegment: (index: number, audioRef: React.RefObject<HTMLAudioElement | null>) => void;
+  playFromActiveSegment: (audioRef: React.RefObject<HTMLAudioElement | null>) => void;
+  clearSeekEvent: () => void;
 }
 
 /**
- * Hook for synchronizing audio playback with transcription segments.
- *
- * Tracks the current playback time and determines which segment should be
- * highlighted based on the audio position. Also manages segment selection
- * for keyboard navigation and editing.
- *
- * Features:
- * - Tracks current audio time and playing state
- * - Auto-highlights segment based on playback position
- * - Throttles highlight updates to ~4/sec for performance
- * - Handles timestamp clicks to seek audio
- * - Manages selected segment for keyboard navigation
- * - Tracks edit request state for keyboard shortcut handling
- *
- * @param segments - Array of transcription segments with timing info
- * @returns Audio sync state and handler functions
- *
- * @example
- * const { highlightedSegmentIndex, handleTimeUpdate } = useAudioSync(segments);
- * // Pass handleTimeUpdate to audio element's onTimeUpdate
+ * Synchronizes audio playback with transcription segments.
+ * Manages activeSegmentIndex which follows playback and can be set via clicks/keyboard.
  */
 export function useAudioSync(segments: TranscriptionSegment[]): UseAudioSyncReturn {
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [highlightedSegmentIndex, setHighlightedSegmentIndex] = useState<number | null>(null);
-  const [selectedSegmentIndex, setSelectedSegmentIndex] = useState<number | null>(null);
+  const [activeSegmentIndex, setActiveSegmentIndex] = useState<number | null>(null);
   const [isEditRequested, setIsEditRequested] = useState(false);
+  const [seekEvent, setSeekEvent] = useState<SeekEvent | null>(null);
 
-  // Ref to track last highlight update time for throttling
   const lastHighlightUpdateRef = useRef(0);
+  const seekIdRef = useRef(0);
+  const lastNavigationTimeRef = useRef(0);
+  const NAVIGATION_LOCK_DURATION = 500;
 
-  // Handle audio time updates - finds matching segment and updates highlight
+  const findSegmentAtTime = useCallback(
+    (time: number) => segments.findIndex((s) => time >= s.startTime && time <= s.endTime),
+    [segments]
+  );
+
+  const emitSeekEvent = useCallback((index: number) => {
+    seekIdRef.current += 1;
+    setSeekEvent({ segmentIndex: index, id: seekIdRef.current });
+  }, []);
+
+  // Called during audio playback - updates active segment with throttling
   const handleTimeUpdate = useCallback(
     (time: number) => {
       setCurrentTime(time);
 
-      // Find segment that contains the current time
-      const index = segments.findIndex(
-        (s) => time >= s.startTime && time <= s.endTime
-      );
-
-      // Throttle highlight updates to ~4/sec to reduce re-renders
       const now = Date.now();
-      if (index !== -1 && index !== highlightedSegmentIndex && now - lastHighlightUpdateRef.current > 250) {
+      if (now - lastNavigationTimeRef.current < NAVIGATION_LOCK_DURATION) return;
+
+      const index = findSegmentAtTime(time);
+      if (index !== activeSegmentIndex && now - lastHighlightUpdateRef.current > 250) {
         lastHighlightUpdateRef.current = now;
-        setHighlightedSegmentIndex(index);
+        setActiveSegmentIndex(index === -1 ? null : index);
       }
     },
-    [segments, highlightedSegmentIndex]
+    [findSegmentAtTime, activeSegmentIndex]
   );
 
-  // Handle click on timestamp - seeks audio and starts playback
-  const handleTimestampClick = useCallback(
-    (segment: TranscriptionSegment, audioRef: React.RefObject<HTMLAudioElement | null>) => {
-      if (audioRef.current) {
-        audioRef.current.currentTime = segment.startTime;
-        setHighlightedSegmentIndex(segments.indexOf(segment));
+  // Called when user scrubs the audio slider
+  const handleSeek = useCallback(
+    (time: number) => {
+      setCurrentTime(time);
+      lastNavigationTimeRef.current = Date.now();
 
-        // Auto-play if not already playing
-        if (!isPlaying) {
-          audioRef.current.play();
-        }
+      const index = findSegmentAtTime(time);
+      setActiveSegmentIndex(index === -1 ? null : index);
+      if (index !== -1) emitSeekEvent(index);
+    },
+    [findSegmentAtTime, emitSeekEvent]
+  );
+
+  const clearSeekEvent = useCallback(() => setSeekEvent(null), []);
+
+  // Click on segment - seeks and starts playback
+  const handleSegmentClick = useCallback(
+    (segment: TranscriptionSegment, audioRef: React.RefObject<HTMLAudioElement | null>) => {
+      if (!audioRef.current) return;
+
+      lastNavigationTimeRef.current = Date.now();
+      const index = segments.indexOf(segment);
+
+      audioRef.current.currentTime = segment.startTime;
+      setActiveSegmentIndex(index);
+      emitSeekEvent(index);
+      audioRef.current.play();
+    },
+    [segments, emitSeekEvent]
+  );
+
+  // Keyboard navigation - seeks without auto-play
+  const navigateToSegment = useCallback(
+    (index: number, audioRef: React.RefObject<HTMLAudioElement | null>) => {
+      if (index < 0 || index >= segments.length) return;
+
+      lastNavigationTimeRef.current = Date.now();
+      setActiveSegmentIndex(index);
+      emitSeekEvent(index);
+
+      if (audioRef.current) {
+        audioRef.current.currentTime = segments[index].startTime;
       }
     },
-    [segments, isPlaying]
+    [segments, emitSeekEvent]
+  );
+
+  const playFromActiveSegment = useCallback(
+    (audioRef: React.RefObject<HTMLAudioElement | null>) => {
+      if (!audioRef.current || activeSegmentIndex === null) return;
+
+      const segment = segments[activeSegmentIndex];
+      if (segment) {
+        audioRef.current.currentTime = segment.startTime;
+        audioRef.current.play();
+      }
+    },
+    [segments, activeSegmentIndex]
   );
 
   return {
     currentTime,
     isPlaying,
-    highlightedSegmentIndex,
-    selectedSegmentIndex,
+    activeSegmentIndex,
     isEditRequested,
+    seekEvent,
     setIsPlaying,
-    setSelectedSegmentIndex,
     setIsEditRequested,
     handleTimeUpdate,
-    handleTimestampClick,
+    handleSeek,
+    handleSegmentClick,
+    navigateToSegment,
+    playFromActiveSegment,
+    clearSeekEvent,
   };
 }

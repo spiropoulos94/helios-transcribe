@@ -10,13 +10,14 @@ import AudioPlayerFull from './AudioPlayerFull';
 interface AudioPlayerProps {
   audioFileId?: string;
   onTimeUpdate?: (currentTime: number) => void;
+  onSeek?: (time: number) => void;
   onReady?: (duration: number) => void;
   onPlayingChange?: (isPlaying: boolean) => void;
   compact?: boolean;
 }
 
 const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
-  ({ audioFileId, onTimeUpdate, onReady, onPlayingChange, compact = false }, ref) => {
+  ({ audioFileId, onTimeUpdate, onSeek, onReady, onPlayingChange, compact = false }, ref) => {
     const { t } = useTranslations();
     const { audioUrl, isLoading, error } = useAudioLoader(audioFileId);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -55,6 +56,7 @@ const AudioPlayer = forwardRef<HTMLAudioElement, AudioPlayerProps>(
       const newTime = parseFloat(e.target.value);
       audio.current.currentTime = newTime;
       setCurrentTime(newTime);
+      onSeek?.(newTime);
     };
 
     const handlePlaybackRateChange = (rate: number) => {

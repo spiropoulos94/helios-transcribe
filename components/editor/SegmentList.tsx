@@ -1,42 +1,50 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { TranscriptionSegment } from '@/lib/ai/types';
 import { SegmentApproval } from '@/lib/transcriptionStorage';
 import { ColorScheme } from '@/lib/editor/speakerColors';
+import { SearchMatchEvent } from '@/lib/hooks/useSegmentSearch';
 import SegmentCard from './SegmentCard';
+
+interface SeekEvent {
+  segmentIndex: number;
+  id: number;
+}
 
 interface SegmentListProps {
   segments: TranscriptionSegment[];
   approvals: SegmentApproval[];
   speakerColorMap: Record<string, ColorScheme>;
-  highlightedSegmentIndex: number | null;
-  selectedSegmentIndex: number | null;
+  activeSegmentIndex: number | null;
+  seekEvent: SeekEvent | null;
+  currentSearchMatch: SearchMatchEvent | null;
   isPlaying: boolean;
   isEditRequested: boolean;
   onApprove: (index: number) => void;
   onUnapprove: (index: number) => void;
   onEdit: (index: number, newText: string) => void;
-  onTimestampClick: (segment: TranscriptionSegment) => void;
-  onSelect: (index: number | null) => void;
+  onSegmentClick: (segment: TranscriptionSegment) => void;
   onEditRequestHandled: () => void;
+  onSeekEventHandled: () => void;
 }
 
 export default function SegmentList({
   segments,
   approvals,
   speakerColorMap,
-  highlightedSegmentIndex,
-  selectedSegmentIndex,
+  activeSegmentIndex,
+  seekEvent,
+  currentSearchMatch,
   isPlaying,
   isEditRequested,
   onApprove,
   onUnapprove,
   onEdit,
-  onTimestampClick,
-  onSelect,
+  onSegmentClick,
   onEditRequestHandled,
+  onSeekEventHandled,
 }: SegmentListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -47,25 +55,52 @@ export default function SegmentList({
     overscan: 5,
   });
 
-  // Scroll to highlighted segment when it changes (during playback)
-  useEffect(() => {
-    if (highlightedSegmentIndex !== null && isPlaying) {
-      virtualizer.scrollToIndex(highlightedSegmentIndex, {
-        align: 'center',
-        behavior: 'smooth',
-      });
-    }
-  }, [highlightedSegmentIndex, isPlaying, virtualizer]);
+  // Scroll to segment with retry logic for large jumps (virtualizer needs time to measure distant segments)
+  const scrollToSegment = useCallback((index: number) => {
+    let attempts = 0;
+    const maxAttempts = 15;
 
-  // Scroll to selected segment when it changes (keyboard navigation)
-  useEffect(() => {
-    if (selectedSegmentIndex !== null) {
-      virtualizer.scrollToIndex(selectedSegmentIndex, {
+    const attemptScroll = () => {
+      attempts++;
+      virtualizer.scrollToIndex(index, {
         align: 'center',
-        behavior: 'smooth',
+        behavior: attempts === 1 ? 'smooth' : 'auto',
       });
+
+      if (attempts >= maxAttempts) return;
+
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          const isVisible = virtualizer.getVirtualItems().some(item => item.index === index);
+          if (!isVisible) attemptScroll();
+        }, 50);
+      });
+    };
+
+    attemptScroll();
+  }, [virtualizer]);
+
+  // Scroll on explicit user actions (seek, click, keyboard navigation)
+  useEffect(() => {
+    if (seekEvent !== null) {
+      scrollToSegment(seekEvent.segmentIndex);
+      onSeekEventHandled();
     }
-  }, [selectedSegmentIndex, virtualizer]);
+  }, [seekEvent?.id, scrollToSegment, onSeekEventHandled]);
+
+  // Auto-scroll during playback
+  useEffect(() => {
+    if (activeSegmentIndex !== null) {
+      scrollToSegment(activeSegmentIndex);
+    }
+  }, [activeSegmentIndex, scrollToSegment]);
+
+  // Scroll to search match
+  useEffect(() => {
+    if (currentSearchMatch !== null) {
+      scrollToSegment(currentSearchMatch.segmentIndex);
+    }
+  }, [currentSearchMatch?.id, scrollToSegment]);
 
   const virtualItems = virtualizer.getVirtualItems();
 
@@ -107,16 +142,15 @@ export default function SegmentList({
                   segment={segment}
                   index={index}
                   approval={approval}
-                  isHighlighted={highlightedSegmentIndex === index}
-                  isSelected={selectedSegmentIndex === index}
+                  isActive={activeSegmentIndex === index}
                   isPlaying={isPlaying}
-                  isEditRequested={isEditRequested && selectedSegmentIndex === index}
+                  isEditRequested={isEditRequested && activeSegmentIndex === index}
                   speakerColor={speakerColorMap[segment.speaker]}
+                  searchMatch={currentSearchMatch?.segmentIndex === index ? currentSearchMatch : null}
                   onApprove={onApprove}
                   onUnapprove={onUnapprove}
                   onEdit={onEdit}
-                  onTimestampClick={onTimestampClick}
-                  onSelect={onSelect}
+                  onSegmentClick={onSegmentClick}
                   onEditRequestHandled={onEditRequestHandled}
                 />
               </div>

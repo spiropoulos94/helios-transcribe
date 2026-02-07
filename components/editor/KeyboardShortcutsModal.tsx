@@ -18,12 +18,15 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
           {t.editor?.keyboardShortcuts || 'Keyboard Shortcuts'}
         </h3>
         <div className="space-y-2 text-sm">
-          <ShortcutRow label={t.editor?.shortcutApprove || 'Toggle approve'} keys={['A']} />
+          <ShortcutRow label={t.editor?.shortcutApprove || 'Approve/unapprove'} keys={['A']} />
           <ShortcutRow label={t.editor?.shortcutEdit || 'Edit segment'} keys={['E']} />
           <ShortcutRow label={t.editor?.shortcutNext || 'Next segment'} keys={['J', '↓']} />
           <ShortcutRow label={t.editor?.shortcutPrev || 'Previous segment'} keys={['K', '↑']} />
-          <ShortcutRow label={t.editor?.shortcutPlayPause || 'Play/Pause'} keys={['Space']} />
-          <ShortcutRow label={t.editor?.shortcutEscape || 'Clear selection'} keys={['Esc']} />
+          <ShortcutRow label={t.editor?.shortcutNextUnapproved || 'Next unapproved'} keys={['N']} />
+          <ShortcutRow label={t.editor?.shortcutPrevUnapproved || 'Previous unapproved'} keys={['P']} />
+          <ShortcutRow label={t.editor?.shortcutPlayPause || 'Play from segment'} keys={['Space']} />
+          <ShortcutRow label={t.editor?.shortcutSearch || 'Search'} keys={['/', '⌘F']} />
+          <ShortcutRow label={t.editor?.shortcutEscape || 'Close search'} keys={['Esc']} />
         </div>
       </div>
     </>

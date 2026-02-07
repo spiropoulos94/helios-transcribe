@@ -6,11 +6,13 @@ import { SPEAKER_COLORS, ColorScheme } from '@/lib/editor/speakerColors';
 import { useEditorKeyboardShortcuts } from '@/lib/hooks/useEditorKeyboardShortcuts';
 import { useEditorState } from '@/lib/hooks/useEditorState';
 import { useAudioSync } from '@/lib/hooks/useAudioSync';
+import { useSegmentSearch } from '@/lib/hooks/useSegmentSearch';
 import { useTranslations } from '@/contexts/TranslationsContext';
 import EditorHeader from './EditorHeader';
 import AudioPlayer from './AudioPlayer';
 import SpeakerLegend from './SpeakerLegend';
 import SegmentList from './SegmentList';
+import SearchBar from './SearchBar';
 
 interface TranscriptionEditorProps {
   transcription: SavedTranscription;
@@ -30,23 +32,45 @@ function formatTime(seconds: number): string {
 export default function TranscriptionEditor({ transcription }: TranscriptionEditorProps) {
   const { t } = useTranslations();
   const audioRef = useRef<HTMLAudioElement>(null);
-  const segments = transcription.metadata?.structuredData?.segments || [];
+
+  // Get segments sorted by start time
+  const segments = useMemo(() => {
+    const rawSegments = transcription.metadata?.structuredData?.segments || [];
+    return [...rawSegments].sort((a, b) => a.startTime - b.startTime);
+  }, [transcription.metadata?.structuredData?.segments]);
 
   // Custom hooks
-  const { editorState, handleApprove, handleUnapprove, handleEdit, handleFinalize, approvedCount } =
+  const { editorState, handleApprove, handleUnapprove, handleApproveAll, handleUnapproveAll, handleEdit, handleFinalize, approvedCount, getNextUnapprovedIndex, getPrevUnapprovedIndex } =
     useEditorState(transcription, () => alert(t.editor?.finalizeSuccess || 'Transcription finalized successfully!'));
 
   const {
     isPlaying,
-    highlightedSegmentIndex,
-    selectedSegmentIndex,
+    activeSegmentIndex,
     isEditRequested,
+    seekEvent,
     setIsPlaying,
-    setSelectedSegmentIndex,
     setIsEditRequested,
     handleTimeUpdate,
-    handleTimestampClick,
+    handleSeek,
+    handleSegmentClick,
+    navigateToSegment,
+    playFromActiveSegment,
+    clearSeekEvent,
   } = useAudioSync(segments);
+
+  // Search functionality
+  const {
+    searchQuery,
+    setSearchQuery,
+    isSearchOpen,
+    openSearch,
+    closeSearch,
+    currentMatch,
+    currentMatchIndex,
+    matchCount,
+    goToNextMatch,
+    goToPrevMatch,
+  } = useSegmentSearch(segments, editorState.approvals);
 
   // Memoize speaker colors
   const speakerColorMap = useMemo(() => {
@@ -82,53 +106,92 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     URL.revokeObjectURL(url);
   }, [segments, editorState.approvals, transcription.fileName]);
 
-  // Keyboard shortcut handlers
+  // Keyboard shortcut handlers - all use activeSegmentIndex
   const handleKeyboardApprove = useCallback(() => {
-    const index = selectedSegmentIndex ?? highlightedSegmentIndex;
-    if (index !== null) {
-      editorState.approvals[index]?.approved ? handleUnapprove(index) : handleApprove(index);
+    if (activeSegmentIndex !== null) {
+      editorState.approvals[activeSegmentIndex]?.approved
+        ? handleUnapprove(activeSegmentIndex)
+        : handleApprove(activeSegmentIndex);
     }
-  }, [selectedSegmentIndex, highlightedSegmentIndex, editorState.approvals, handleApprove, handleUnapprove]);
+  }, [activeSegmentIndex, editorState.approvals, handleApprove, handleUnapprove]);
 
   const handleKeyboardEdit = useCallback(() => {
-    const index = selectedSegmentIndex ?? highlightedSegmentIndex;
-    if (index !== null) {
-      setSelectedSegmentIndex(index);
+    if (activeSegmentIndex !== null) {
       setIsEditRequested(true);
     }
-  }, [selectedSegmentIndex, highlightedSegmentIndex, setSelectedSegmentIndex, setIsEditRequested]);
+  }, [activeSegmentIndex, setIsEditRequested]);
 
   const handleNextSegment = useCallback(() => {
-    setSelectedSegmentIndex((prev) =>
-      prev === null ? (highlightedSegmentIndex ?? 0) : Math.min(prev + 1, segments.length - 1)
-    );
-  }, [segments.length, highlightedSegmentIndex, setSelectedSegmentIndex]);
+    const nextIndex = activeSegmentIndex === null ? 0 : Math.min(activeSegmentIndex + 1, segments.length - 1);
+    navigateToSegment(nextIndex, audioRef);
+  }, [activeSegmentIndex, segments.length, navigateToSegment]);
 
   const handlePrevSegment = useCallback(() => {
-    setSelectedSegmentIndex((prev) =>
-      prev === null ? (highlightedSegmentIndex ?? 0) : Math.max(prev - 1, 0)
-    );
-  }, [highlightedSegmentIndex, setSelectedSegmentIndex]);
+    const prevIndex = activeSegmentIndex === null ? 0 : Math.max(activeSegmentIndex - 1, 0);
+    navigateToSegment(prevIndex, audioRef);
+  }, [activeSegmentIndex, navigateToSegment]);
+
+  const handleNextUnapproved = useCallback(() => {
+    const currentIndex = activeSegmentIndex ?? -1;
+    const nextIndex = getNextUnapprovedIndex(currentIndex);
+    if (nextIndex !== null) {
+      navigateToSegment(nextIndex, audioRef);
+    }
+  }, [activeSegmentIndex, getNextUnapprovedIndex, navigateToSegment]);
+
+  const handlePrevUnapproved = useCallback(() => {
+    const currentIndex = activeSegmentIndex ?? segments.length;
+    const prevIndex = getPrevUnapprovedIndex(currentIndex);
+    if (prevIndex !== null) {
+      navigateToSegment(prevIndex, audioRef);
+    }
+  }, [activeSegmentIndex, segments.length, getPrevUnapprovedIndex, navigateToSegment]);
 
   const handlePlayPause = useCallback(() => {
     if (audioRef.current) {
-      audioRef.current.paused ? audioRef.current.play() : audioRef.current.pause();
+      if (audioRef.current.paused) {
+        // If paused, play from active segment start
+        playFromActiveSegment(audioRef);
+      } else {
+        audioRef.current.pause();
+      }
     }
-  }, []);
+  }, [playFromActiveSegment]);
+
+  // Handle escape - close search first if open
+  const handleEscape = useCallback(() => {
+    if (isSearchOpen) {
+      closeSearch();
+    }
+    // No need to clear selection - we only have activeSegmentIndex now
+  }, [isSearchOpen, closeSearch]);
 
   useEditorKeyboardShortcuts({
     onApprove: handleKeyboardApprove,
     onEdit: handleKeyboardEdit,
     onNextSegment: handleNextSegment,
     onPrevSegment: handlePrevSegment,
+    onNextUnapproved: handleNextUnapproved,
+    onPrevUnapproved: handlePrevUnapproved,
     onPlayPause: handlePlayPause,
-    onEscape: () => setSelectedSegmentIndex(null),
-    enabled: true,
+    onSearch: openSearch,
+    onEscape: handleEscape,
+    enabled: !isSearchOpen, // Disable most shortcuts when search is open
   });
 
   return (
     <div className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 h-[100vh] max-h-[calc(100vh-67px)] flex flex-col">
       <div className="shrink-0">
+        <SearchBar
+          isOpen={isSearchOpen}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onClose={closeSearch}
+          onNextMatch={goToNextMatch}
+          onPrevMatch={goToPrevMatch}
+          currentMatchIndex={currentMatchIndex}
+          matchCount={matchCount}
+        />
         <EditorHeader
           transcription={transcription}
           editorState={editorState}
@@ -136,34 +199,40 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
           approvedCount={approvedCount}
           onFinalize={handleFinalize}
           onExport={handleExport}
+          onApproveAll={handleApproveAll}
+          onUnapproveAll={handleUnapproveAll}
+          onNextUnapproved={handleNextUnapproved}
+          onPrevUnapproved={handlePrevUnapproved}
+          hasUnapproved={approvedCount < segments.length}
         />
       </div>
 
       <div className="lg:hidden shrink-0">
-        <AudioPlayer ref={audioRef} audioFileId={editorState.audioFileId} onTimeUpdate={handleTimeUpdate} onPlayingChange={setIsPlaying} compact />
+        <AudioPlayer ref={audioRef} audioFileId={editorState.audioFileId} onTimeUpdate={handleTimeUpdate} onSeek={handleSeek} onPlayingChange={setIsPlaying} compact />
       </div>
 
       <div className="flex-1 flex overflow-hidden">
         <div className="hidden lg:flex lg:flex-col lg:w-88 lg:shrink-0 p-6 space-y-4 overflow-y-auto">
-          <AudioPlayer ref={audioRef} audioFileId={editorState.audioFileId} onTimeUpdate={handleTimeUpdate} onPlayingChange={setIsPlaying} />
+          <AudioPlayer ref={audioRef} audioFileId={editorState.audioFileId} onTimeUpdate={handleTimeUpdate} onSeek={handleSeek} onPlayingChange={setIsPlaying} />
           <SpeakerLegend segments={segments} />
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6 lg:pl-0">
+        <div className="flex-1 overflow-hidden p-4 lg:p-6 lg:pl-0">
           <SegmentList
             segments={segments}
             approvals={editorState.approvals}
             speakerColorMap={speakerColorMap}
-            highlightedSegmentIndex={highlightedSegmentIndex}
-            selectedSegmentIndex={selectedSegmentIndex}
+            activeSegmentIndex={activeSegmentIndex}
+            seekEvent={seekEvent}
+            currentSearchMatch={currentMatch}
             isPlaying={isPlaying}
             isEditRequested={isEditRequested}
             onApprove={handleApprove}
             onUnapprove={handleUnapprove}
             onEdit={handleEdit}
-            onTimestampClick={(segment) => handleTimestampClick(segment, audioRef)}
-            onSelect={setSelectedSegmentIndex}
+            onSegmentClick={(segment) => handleSegmentClick(segment, audioRef)}
             onEditRequestHandled={() => setIsEditRequested(false)}
+            onSeekEventHandled={clearSeekEvent}
           />
         </div>
       </div>
