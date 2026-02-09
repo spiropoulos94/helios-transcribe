@@ -23,16 +23,19 @@ interface SegmentCardProps {
   isEditRequested: boolean;
   speakerColor: ColorScheme;
   searchMatch?: SearchMatchHighlight | null;
-  onApprove: (index: number) => void;
-  onUnapprove: (index: number) => void;
-  onEdit: (index: number, newText: string) => void;
+  onApprove?: (index: number) => void;
+  onUnapprove?: (index: number) => void;
+  onEdit?: (index: number, newText: string) => void;
   onSegmentClick: (segment: TranscriptionSegment) => void;
   onEditRequestHandled: () => void;
+  getSpeakerDisplayName?: (originalId: string) => string;
+  onLabelSpeaker?: (originalId: string, customName: string) => void;
 }
 
 function SegmentCard({
   segment, index, approval, isActive, isPlaying, isEditRequested,
   speakerColor, searchMatch, onApprove, onUnapprove, onEdit, onSegmentClick, onEditRequestHandled,
+  getSpeakerDisplayName, onLabelSpeaker,
 }: SegmentCardProps) {
   const { t } = useTranslations();
   const [isEditing, setIsEditing] = useState(false);
@@ -46,7 +49,7 @@ function SegmentCard({
   }, [isEditRequested, isActive, approval.approved, isEditing, onEditRequestHandled]);
 
   const handleSaveEdit = () => {
-    onEdit(index, editedText);
+    onEdit?.(index, editedText);
     setIsEditing(false);
   };
 
@@ -56,7 +59,7 @@ function SegmentCard({
   };
 
   const handleApproveToggle = () => {
-    approval.approved ? onUnapprove(index) : onApprove(index);
+    approval.approved ? onUnapprove?.(index) : onApprove?.(index);
   };
 
   const isNowPlaying = isActive && isPlaying;
@@ -116,6 +119,8 @@ function SegmentCard({
         isEditing={isEditing}
         onApproveToggle={handleApproveToggle}
         onTimestampClick={() => onSegmentClick(segment)}
+        getSpeakerDisplayName={getSpeakerDisplayName}
+        onLabelSpeaker={onLabelSpeaker}
       />
 
       {isEditing ? (

@@ -1,12 +1,14 @@
 'use client';
 
 import { useRef, useCallback, useMemo } from 'react';
+import toast from 'react-hot-toast';
 import { SavedTranscription } from '@/lib/transcriptionStorage';
 import { SPEAKER_COLORS, ColorScheme } from '@/lib/editor/speakerColors';
 import { useEditorKeyboardShortcuts } from '@/lib/hooks/useEditorKeyboardShortcuts';
 import { useEditorState } from '@/lib/hooks/useEditorState';
 import { useAudioSync } from '@/lib/hooks/useAudioSync';
 import { useSegmentSearch } from '@/lib/hooks/useSegmentSearch';
+import { useSpeakerSample } from '@/lib/hooks/useSpeakerSample';
 import { useTranslations } from '@/contexts/TranslationsContext';
 import EditorHeader from './EditorHeader';
 import AudioPlayer from './AudioPlayer';
@@ -39,9 +41,34 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     return [...rawSegments].sort((a, b) => a.startTime - b.startTime);
   }, [transcription.metadata?.structuredData?.segments]);
 
-  // Custom hooks
-  const { editorState, handleApprove, handleUnapprove, handleApproveAll, handleUnapproveAll, handleEdit, handleFinalize, approvedCount, getNextUnapprovedIndex, getPrevUnapprovedIndex } =
-    useEditorState(transcription, () => alert(t.editor?.finalizeSuccess || 'Transcription finalized successfully!'));
+  // Editor state with speaker management
+  const {
+    editorState,
+    handleApprove,
+    handleUnapprove,
+    handleApproveAll,
+    handleUnapproveAll,
+    handleEdit,
+    handleFinalize,
+    handleRevertToDraft,
+    approvedCount,
+    getNextUnapprovedIndex,
+    getPrevUnapprovedIndex,
+    speakerLabels,
+    handleLabelSpeaker,
+    getSpeakerDisplayName,
+    uniqueSpeakers,
+    labeledCount,
+  } = useEditorState(transcription, segments, () =>
+    toast.success(t.editor?.finalizeSuccess || 'Transcription finalized successfully!')
+  );
+
+  // Speaker sample playback (always enabled for sidebar legend)
+  const speakerSample = useSpeakerSample({
+    segments,
+    audioRef,
+    enabled: true,
+  });
 
   const {
     isPlaying,
@@ -74,14 +101,14 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
 
   // Memoize speaker colors
   const speakerColorMap = useMemo(() => {
-    const uniqueSpeakers: string[] = [];
+    const speakers: string[] = [];
     for (const segment of segments) {
-      if (!uniqueSpeakers.includes(segment.speaker)) {
-        uniqueSpeakers.push(segment.speaker);
+      if (!speakers.includes(segment.speaker)) {
+        speakers.push(segment.speaker);
       }
     }
     return Object.fromEntries(
-      uniqueSpeakers.map((speaker, i) => [speaker, SPEAKER_COLORS[i % SPEAKER_COLORS.length]])
+      speakers.map((speaker, i) => [speaker, SPEAKER_COLORS[i % SPEAKER_COLORS.length]])
     ) as Record<string, ColorScheme>;
   }, [segments]);
 
@@ -91,7 +118,8 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
       .map((segment, index) => {
         const approval = editorState.approvals[index];
         const text = approval?.editedText || segment.text;
-        return `${segment.speaker} [${formatTime(segment.startTime)} - ${formatTime(segment.endTime)}]:\n${text}\n`;
+        const speakerName = getSpeakerDisplayName(segment.speaker);
+        return `${speakerName} [${formatTime(segment.startTime)} - ${formatTime(segment.endTime)}]:\n${text}\n`;
       })
       .join('\n');
 
@@ -104,9 +132,9 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [segments, editorState.approvals, transcription.fileName]);
+  }, [segments, editorState.approvals, transcription.fileName, getSpeakerDisplayName]);
 
-  // Keyboard shortcut handlers - all use activeSegmentIndex
+  // Keyboard shortcut handlers
   const handleKeyboardApprove = useCallback(() => {
     if (activeSegmentIndex !== null) {
       editorState.approvals[activeSegmentIndex]?.approved
@@ -122,7 +150,8 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
   }, [activeSegmentIndex, setIsEditRequested]);
 
   const handleNextSegment = useCallback(() => {
-    const nextIndex = activeSegmentIndex === null ? 0 : Math.min(activeSegmentIndex + 1, segments.length - 1);
+    const nextIndex =
+      activeSegmentIndex === null ? 0 : Math.min(activeSegmentIndex + 1, segments.length - 1);
     navigateToSegment(nextIndex, audioRef);
   }, [activeSegmentIndex, segments.length, navigateToSegment]);
 
@@ -150,7 +179,6 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
   const handlePlayPause = useCallback(() => {
     if (audioRef.current) {
       if (audioRef.current.paused) {
-        // If paused, play from active segment start
         playFromActiveSegment(audioRef);
       } else {
         audioRef.current.pause();
@@ -158,12 +186,10 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     }
   }, [playFromActiveSegment]);
 
-  // Handle escape - close search first if open
   const handleEscape = useCallback(() => {
     if (isSearchOpen) {
       closeSearch();
     }
-    // No need to clear selection - we only have activeSegmentIndex now
   }, [isSearchOpen, closeSearch]);
 
   useEditorKeyboardShortcuts({
@@ -176,7 +202,7 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     onPlayPause: handlePlayPause,
     onSearch: openSearch,
     onEscape: handleEscape,
-    enabled: !isSearchOpen, // Disable most shortcuts when search is open
+    enabled: !isSearchOpen,
   });
 
   return (
@@ -197,7 +223,10 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
           editorState={editorState}
           totalSegments={segments.length}
           approvedCount={approvedCount}
+          labeledCount={labeledCount}
+          totalSpeakers={uniqueSpeakers.length}
           onFinalize={handleFinalize}
+          onRevertToDraft={handleRevertToDraft}
           onExport={handleExport}
           onApproveAll={handleApproveAll}
           onUnapproveAll={handleUnapproveAll}
@@ -208,13 +237,35 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
       </div>
 
       <div className="lg:hidden shrink-0">
-        <AudioPlayer ref={audioRef} audioFileId={editorState.audioFileId} onTimeUpdate={handleTimeUpdate} onSeek={handleSeek} onPlayingChange={setIsPlaying} compact />
+        <AudioPlayer
+          ref={audioRef}
+          audioFileId={editorState.audioFileId}
+          onTimeUpdate={handleTimeUpdate}
+          onSeek={handleSeek}
+          onPlayingChange={setIsPlaying}
+          compact
+        />
       </div>
 
       <div className="flex-1 flex overflow-hidden">
         <div className="hidden lg:flex lg:flex-col lg:w-88 lg:shrink-0 p-6 space-y-4 overflow-y-auto">
-          <AudioPlayer ref={audioRef} audioFileId={editorState.audioFileId} onTimeUpdate={handleTimeUpdate} onSeek={handleSeek} onPlayingChange={setIsPlaying} />
-          <SpeakerLegend segments={segments} />
+          <AudioPlayer
+            ref={audioRef}
+            audioFileId={editorState.audioFileId}
+            onTimeUpdate={handleTimeUpdate}
+            onSeek={handleSeek}
+            onPlayingChange={setIsPlaying}
+          />
+
+          <SpeakerLegend
+            segments={segments}
+            getSpeakerDisplayName={getSpeakerDisplayName}
+            onLabelSpeaker={handleLabelSpeaker}
+            onPlaySpeakerSample={(speakerId) => speakerSample.playSpeakerSample(speakerId, 5)}
+            onStopSample={speakerSample.stopSample}
+            isPlayingSample={speakerSample.isPlayingSample}
+            currentPlayingSpeaker={speakerSample.currentSpeaker}
+          />
         </div>
 
         <div className="flex-1 overflow-hidden p-4 lg:p-6 lg:pl-0">
@@ -233,6 +284,8 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
             onSegmentClick={(segment) => handleSegmentClick(segment, audioRef)}
             onEditRequestHandled={() => setIsEditRequested(false)}
             onSeekEventHandled={clearSeekEvent}
+            getSpeakerDisplayName={getSpeakerDisplayName}
+            onLabelSpeaker={handleLabelSpeaker}
           />
         </div>
       </div>

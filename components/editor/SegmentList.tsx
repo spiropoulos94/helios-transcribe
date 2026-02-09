@@ -28,6 +28,8 @@ interface SegmentListProps {
   onSegmentClick: (segment: TranscriptionSegment) => void;
   onEditRequestHandled: () => void;
   onSeekEventHandled: () => void;
+  getSpeakerDisplayName?: (originalId: string) => string;
+  onLabelSpeaker?: (originalId: string, customName: string) => void;
 }
 
 export default function SegmentList({
@@ -45,6 +47,8 @@ export default function SegmentList({
   onSegmentClick,
   onEditRequestHandled,
   onSeekEventHandled,
+  getSpeakerDisplayName,
+  onLabelSpeaker,
 }: SegmentListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -152,6 +156,8 @@ export default function SegmentList({
                   onEdit={onEdit}
                   onSegmentClick={onSegmentClick}
                   onEditRequestHandled={onEditRequestHandled}
+                  getSpeakerDisplayName={getSpeakerDisplayName}
+                  onLabelSpeaker={onLabelSpeaker}
                 />
               </div>
             </div>

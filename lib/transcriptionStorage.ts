@@ -20,6 +20,15 @@ export interface SegmentApproval {
 }
 
 /**
+ * Speaker label mapping for the labeling workflow stage
+ */
+export interface SpeakerLabel {
+  originalId: string; // "Speaker A", "Speaker B"
+  customName: string; // "John Smith", "Dr. Jane Doe"
+  labeledAt?: number; // Timestamp when labeled
+}
+
+/**
  * Transcription editor state for segment approval workflow
  */
 export interface TranscriptionEditorState {
@@ -29,6 +38,7 @@ export interface TranscriptionEditorState {
   audioFileId?: string;
   audioFileName?: string;
   audioDuration?: number;
+  speakerLabels?: SpeakerLabel[];
 }
 
 /**

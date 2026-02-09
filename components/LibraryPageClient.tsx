@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { History, Trash2, FileText, Loader2 } from 'lucide-react';
 import { TranscriptionCard } from '@/components/TranscriptionCard';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   TranscriptionListItem,
   getTranscriptionList,
@@ -22,6 +23,7 @@ export default function LibraryPageClient() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [total, setTotal] = useState(0);
+  const [showClearAllDialog, setShowClearAllDialog] = useState(false);
 
   useEffect(() => {
     initializeAndLoad();
@@ -58,19 +60,31 @@ export default function LibraryPageClient() {
     setTotal(prev => prev - 1);
   };
 
-  const handleClearAll = async () => {
-    if (window.confirm('Are you sure you want to delete all saved transcriptions? This action cannot be undone.')) {
-      await clearAllTranscriptions();
-      setTranscriptions([]);
-      setNextCursor(null);
-      setTotal(0);
-    }
+  const handleClearAll = () => {
+    setShowClearAllDialog(true);
+  };
+
+  const confirmClearAll = async () => {
+    await clearAllTranscriptions();
+    setTranscriptions([]);
+    setNextCursor(null);
+    setTotal(0);
+    setShowClearAllDialog(false);
   };
 
   const hasMore = nextCursor !== null;
 
   return (
-    <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
+    <div className="flex-1 bg-linear-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
+      <ConfirmDialog
+        isOpen={showClearAllDialog}
+        title={t.common?.confirm || 'Confirm'}
+        message="Are you sure you want to delete all saved transcriptions? This action cannot be undone."
+        confirmLabel={t.common?.delete || 'Delete'}
+        variant="danger"
+        onConfirm={confirmClearAll}
+        onCancel={() => setShowClearAllDialog(false)}
+      />
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
         {/* Page Header */}

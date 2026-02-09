@@ -18,6 +18,7 @@ import {
 import { SavedTranscription, deleteTranscription } from '@/lib/transcriptionStorage';
 import { calculateTranscriptionCost } from '@/lib/pricing/calculator';
 import { useTranslations } from '@/contexts/TranslationsContext';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 interface LegacyTranscriptViewProps {
   transcription: SavedTranscription;
@@ -30,6 +31,7 @@ export default function LegacyTranscriptView({
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(transcription.text);
@@ -49,12 +51,14 @@ export default function LegacyTranscriptView({
     URL.revokeObjectURL(url);
   };
 
-  const handleDelete = async () => {
-    if (window.confirm(t.libraryDetail?.confirmDelete)) {
-      setIsDeleting(true);
-      await deleteTranscription(transcription.id);
-      router.push(`/${lang}/library`);
-    }
+  const handleDelete = () => {
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    await deleteTranscription(transcription.id);
+    router.push(`/${lang}/library`);
   };
 
   const formatDate = (timestamp: number) => {
@@ -92,8 +96,18 @@ export default function LegacyTranscriptView({
   };
 
   return (
-    <div className="flex-1 bg-linear-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
-      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <>
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        title={t.common?.delete || 'Delete'}
+        message={t.libraryDetail?.confirmDelete || 'Are you sure you want to delete this transcription?'}
+        confirmLabel={t.common?.delete || 'Delete'}
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
+      <div className="flex-1 bg-linear-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
+        <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Navigation Bar */}
         <div className="flex items-center mb-6 animate-in fade-in slide-in-from-bottom-4">
           <Link href={`/${lang}/library`} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
@@ -167,5 +181,6 @@ export default function LegacyTranscriptView({
         </div>
       </main>
     </div>
+    </>
   );
 }
