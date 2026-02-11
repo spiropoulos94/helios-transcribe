@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback, useMemo } from 'react';
+import { useRef, useCallback, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { SavedTranscription } from '@/lib/transcriptionStorage';
 import { SPEAKER_COLORS, ColorScheme } from '@/lib/editor/speakerColors';
@@ -15,6 +15,8 @@ import AudioPlayer from './AudioPlayer';
 import SpeakerLegend from './SpeakerLegend';
 import SegmentList from './SegmentList';
 import SearchBar from './SearchBar';
+import OfficialMinutesDialog from './OfficialMinutesDialog';
+import PressReleaseDialog from './PressReleaseDialog';
 
 interface TranscriptionEditorProps {
   transcription: SavedTranscription;
@@ -34,6 +36,8 @@ function formatTime(seconds: number): string {
 export default function TranscriptionEditor({ transcription }: TranscriptionEditorProps) {
   const { t } = useTranslations();
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [showOfficialMinutesDialog, setShowOfficialMinutesDialog] = useState(false);
+  const [showPressReleaseDialog, setShowPressReleaseDialog] = useState(false);
 
   // Get segments sorted by start time
   const segments = useMemo(() => {
@@ -112,8 +116,8 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     ) as Record<string, ColorScheme>;
   }, [segments]);
 
-  // Export handler
-  const handleExport = useCallback(() => {
+  // Plain text export handler
+  const handleExportPlainText = useCallback(() => {
     const exportText = segments
       .map((segment, index) => {
         const approval = editorState.approvals[index];
@@ -133,6 +137,16 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }, [segments, editorState.approvals, transcription.fileName, getSpeakerDisplayName]);
+
+  // Official minutes export handler
+  const handleExportOfficialMinutes = useCallback(() => {
+    setShowOfficialMinutesDialog(true);
+  }, []);
+
+  // Press release export handler
+  const handleExportPressRelease = useCallback(() => {
+    setShowPressReleaseDialog(true);
+  }, []);
 
   // Keyboard shortcut handlers
   const handleKeyboardApprove = useCallback(() => {
@@ -227,7 +241,9 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
           totalSpeakers={uniqueSpeakers.length}
           onFinalize={handleFinalize}
           onRevertToDraft={handleRevertToDraft}
-          onExport={handleExport}
+          onExportPlainText={handleExportPlainText}
+          onExportOfficialMinutes={handleExportOfficialMinutes}
+          onExportPressRelease={handleExportPressRelease}
           onApproveAll={handleApproveAll}
           onUnapproveAll={handleUnapproveAll}
           onNextUnapproved={handleNextUnapproved}
@@ -289,6 +305,29 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
           />
         </div>
       </div>
+
+      {/* Official Minutes Export Dialog */}
+      <OfficialMinutesDialog
+        isOpen={showOfficialMinutesDialog}
+        onClose={() => setShowOfficialMinutesDialog(false)}
+        segments={segments}
+        approvals={editorState.approvals}
+        speakerLabels={speakerLabels}
+        getSpeakerDisplayName={getSpeakerDisplayName}
+        fileName={transcription.fileName}
+        transcriptionId={transcription.id}
+      />
+
+      {/* Press Release Export Dialog */}
+      <PressReleaseDialog
+        isOpen={showPressReleaseDialog}
+        onClose={() => setShowPressReleaseDialog(false)}
+        segments={segments}
+        approvals={editorState.approvals}
+        getSpeakerDisplayName={getSpeakerDisplayName}
+        fileName={transcription.fileName}
+        transcriptionId={transcription.id}
+      />
     </div>
   );
 }

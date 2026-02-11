@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { ArrowLeft, Download, Trash2, CheckCircle, Keyboard, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Trash2, CheckCircle, Keyboard, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { SavedTranscription, deleteTranscription, TranscriptionEditorState } from '@/lib/transcriptionStorage';
 import { useTranslations } from '@/contexts/TranslationsContext';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 import BulkApprovalMenu from './BulkApprovalMenu';
+import ExportMenu from './ExportMenu';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 interface EditorHeaderProps {
@@ -19,7 +20,9 @@ interface EditorHeaderProps {
   totalSpeakers: number;
   onFinalize: () => void;
   onRevertToDraft: () => void;
-  onExport: () => void;
+  onExportPlainText: () => void;
+  onExportOfficialMinutes: () => void;
+  onExportPressRelease: () => void;
   onApproveAll: () => void;
   onUnapproveAll: () => void;
   onNextUnapproved: () => void;
@@ -30,7 +33,7 @@ interface EditorHeaderProps {
 export default function EditorHeader({
   transcription, editorState, totalSegments, approvedCount,
   labeledCount, totalSpeakers,
-  onFinalize, onRevertToDraft, onExport, onApproveAll, onUnapproveAll, onNextUnapproved, onPrevUnapproved, hasUnapproved,
+  onFinalize, onRevertToDraft, onExportPlainText, onExportOfficialMinutes, onExportPressRelease, onApproveAll, onUnapproveAll, onNextUnapproved, onPrevUnapproved, hasUnapproved,
 }: EditorHeaderProps) {
   const { t, lang } = useTranslations();
   const router = useRouter();
@@ -151,9 +154,11 @@ export default function EditorHeader({
               </button>
             )}
 
-            <button onClick={onExport} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title={t.editor?.export || 'Export'}>
-              <Download className="w-4 h-4" />
-            </button>
+            <ExportMenu
+              onExportPlainText={onExportPlainText}
+              onExportOfficialMinutes={onExportOfficialMinutes}
+              onExportPressRelease={onExportPressRelease}
+            />
 
             <button onClick={handleDelete} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title={t.libraryDetail?.delete || 'Delete'}>
               <Trash2 className="w-4 h-4" />
