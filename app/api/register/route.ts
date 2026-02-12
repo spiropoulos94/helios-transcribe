@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+import { isEmailAllowed } from '@/lib/auth-utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +11,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
+      )
+    }
+
+    // Check if email is allowed
+    if (!isEmailAllowed(email)) {
+      return NextResponse.json(
+        { error: 'Registration is not open for this email address' },
+        { status: 403 }
       )
     }
 

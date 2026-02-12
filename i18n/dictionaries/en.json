@@ -202,7 +202,8 @@
     "haveAccount": "Already have an account?",
     "passwordMismatch": "Passwords do not match",
     "passwordTooShort": "Password must be at least 8 characters",
-    "registrationFailed": "Registration failed"
+    "registrationFailed": "Registration failed",
+    "accessRestricted": "Access is restricted. This email is not authorized."
   },
   "footer": {
     "madeWith": "Made with",

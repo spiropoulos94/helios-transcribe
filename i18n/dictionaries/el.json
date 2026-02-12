@@ -202,7 +202,8 @@
     "haveAccount": "Έχετε ήδη λογαριασμό;",
     "passwordMismatch": "Οι κωδικοί δεν ταιριάζουν",
     "passwordTooShort": "Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες",
-    "registrationFailed": "Η εγγραφή απέτυχε"
+    "registrationFailed": "Η εγγραφή απέτυχε",
+    "accessRestricted": "Η πρόσβαση είναι περιορισμένη. Αυτό το email δεν είναι εξουσιοδοτημένο."
   },
   "footer": {
     "madeWith": "Φτιαγμένο με",

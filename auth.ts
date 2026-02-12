@@ -1,7 +1,12 @@
-import NextAuth from 'next-auth'
+import NextAuth, { CredentialsSignin } from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+import { isEmailAllowed } from '@/lib/auth-utils'
+
+class AccessRestrictedError extends CredentialsSignin {
+  code = 'access_restricted'
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -18,6 +23,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const email = credentials.email as string
         const password = credentials.password as string
+
+        // Check if email is allowed
+        if (!isEmailAllowed(email)) {
+          throw new AccessRestrictedError()
+        }
 
         const user = await prisma.user.findUnique({
           where: { email },

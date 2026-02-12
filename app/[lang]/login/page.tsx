@@ -31,7 +31,11 @@ function LoginForm() {
       });
 
       if (result?.error) {
-        setError(t.auth?.invalidCredentials || 'Invalid email or password');
+        if (result.code === 'access_restricted') {
+          setError(t.auth?.accessRestricted || 'Access is restricted. This email is not authorized.');
+        } else {
+          setError(t.auth?.invalidCredentials || 'Invalid email or password');
+        }
       } else {
         router.push(callbackUrl);
         router.refresh();
