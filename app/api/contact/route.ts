@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Resend } from 'resend';
 
 interface ContactRequestBody {
   name: string;
@@ -6,6 +7,8 @@ interface ContactRequestBody {
   organization?: string;
   message?: string;
 }
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
  * POST /api/contact
@@ -39,27 +42,19 @@ export async function POST(request: NextRequest) {
     console.log(`  Organization: ${body.organization || '(not provided)'}`);
     console.log(`  Message: ${body.message || '(not provided)'}`);
 
-    // Send email notification via Resend (if configured)
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (resendApiKey) {
-      await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'Grecho <onboarding@resend.dev>',
-          to: 'grechopersonal@gmail.com',
-          subject: `New Access Request: ${body.name}`,
-          html: `
-            <h2>New Grecho Access Request</h2>
-            <p><strong>Name:</strong> ${body.name}</p>
-            <p><strong>Email:</strong> ${body.email}</p>
-            <p><strong>Organization:</strong> ${body.organization || 'Not provided'}</p>
-            <p><strong>Message:</strong> ${body.message || 'Not provided'}</p>
-          `,
-        }),
+    // Send email notification via Resend
+    if (process.env.RESEND_API_KEY) {
+      await resend.emails.send({
+        from: 'onboarding@resend.dev',
+        to:  'grechopersonal@gmail.com',
+        subject: `New Access Request: ${body.name}`,
+        html: `
+          <h2>New Grecho Access Request</h2>
+          <p><strong>Name:</strong> ${body.name}</p>
+          <p><strong>Email:</strong> ${body.email}</p>
+          <p><strong>Organization:</strong> ${body.organization || 'Not provided'}</p>
+          <p><strong>Message:</strong> ${body.message || 'Not provided'}</p>
+        `,
       });
       console.log('[Contact] Email notification sent');
     }
