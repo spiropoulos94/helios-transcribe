@@ -35,7 +35,7 @@ export default function HeroSection({ translations: t }: HeroSectionProps) {
           <div className="flex flex-col sm:flex-row gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
             <button
               onClick={() => setIsModalOpen(true)}
-              className="group inline-flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white text-lg font-semibold rounded-xl transition-all hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/50"
+              className="cursor-pointer group inline-flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white text-lg font-semibold rounded-xl transition-all hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/50"
             >
               <Mail className="w-6 h-6" />
               {t.hero.cta}

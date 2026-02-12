@@ -90,6 +90,8 @@
       "namePlaceholder": "Your name",
       "email": "Email",
       "emailPlaceholder": "you@example.com",
+      "telephone": "Telephone",
+      "telephonePlaceholder": "Your phone number (optional)",
       "organization": "Organization",
       "organizationPlaceholder": "Your organization (optional)",
       "message": "Message",

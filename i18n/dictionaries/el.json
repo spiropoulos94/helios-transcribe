@@ -90,6 +90,8 @@
       "namePlaceholder": "Το όνομά σας",
       "email": "Email",
       "emailPlaceholder": "you@example.com",
+      "telephone": "Τηλέφωνο",
+      "telephonePlaceholder": "Το τηλέφωνό σας (προαιρετικά)",
       "organization": "Οργανισμός",
       "organizationPlaceholder": "Ο οργανισμός σας (προαιρετικά)",
       "message": "Μήνυμα",

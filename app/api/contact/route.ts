@@ -4,6 +4,7 @@ import { Resend } from 'resend';
 interface ContactRequestBody {
   name: string;
   email: string;
+  telephone?: string;
   organization?: string;
   message?: string;
 }
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
     console.log('[Contact] New access request:');
     console.log(`  Name: ${body.name}`);
     console.log(`  Email: ${body.email}`);
+    console.log(`  Telephone: ${body.telephone || '(not provided)'}`);
     console.log(`  Organization: ${body.organization || '(not provided)'}`);
     console.log(`  Message: ${body.message || '(not provided)'}`);
 
@@ -46,12 +48,13 @@ export async function POST(request: NextRequest) {
     if (process.env.RESEND_API_KEY) {
       await resend.emails.send({
         from: 'onboarding@resend.dev',
-        to:  'grechopersonal@gmail.com',
+        to: 'grechopersonal@gmail.com',
         subject: `New Access Request: ${body.name}`,
         html: `
           <h2>New Grecho Access Request</h2>
           <p><strong>Name:</strong> ${body.name}</p>
           <p><strong>Email:</strong> ${body.email}</p>
+          <p><strong>Telephone:</strong> ${body.telephone || 'Not provided'}</p>
           <p><strong>Organization:</strong> ${body.organization || 'Not provided'}</p>
           <p><strong>Message:</strong> ${body.message || 'Not provided'}</p>
         `,

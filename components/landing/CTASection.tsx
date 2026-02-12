@@ -24,7 +24,7 @@ export default function CTASection({ translations: t }: CTASectionProps) {
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="group inline-flex items-center gap-4 px-10 py-6 bg-white text-blue-600 text-xl font-bold rounded-2xl hover:bg-blue-50 transition-all hover:scale-105 hover:shadow-2xl"
+          className="group inline-flex items-center gap-4 px-10 py-6 bg-white text-blue-600 text-xl font-bold rounded-2xl hover:bg-blue-50 transition-all hover:scale-105 hover:shadow-2xl cursor-pointer"
         >
           <Mail className="w-7 h-7" />
           {t.ctaSection.cta || t.hero?.cta || 'Request Access'}

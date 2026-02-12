@@ -13,6 +13,8 @@ interface ContactFormModalProps {
     namePlaceholder?: string;
     email?: string;
     emailPlaceholder?: string;
+    telephone?: string;
+    telephonePlaceholder?: string;
     organization?: string;
     organizationPlaceholder?: string;
     message?: string;
@@ -29,6 +31,7 @@ export default function ContactFormModal({ isOpen, onClose, translations: t }: C
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    telephone: '',
     organization: '',
     message: '',
   });
@@ -52,7 +55,7 @@ export default function ContactFormModal({ isOpen, onClose, translations: t }: C
       }
 
       setStatus('success');
-      setFormData({ name: '', email: '', organization: '', message: '' });
+      setFormData({ name: '', email: '', telephone: '', organization: '', message: '' });
 
       // Close modal after 2 seconds on success
       setTimeout(() => {
@@ -134,6 +137,20 @@ export default function ContactFormModal({ isOpen, onClose, translations: t }: C
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder={t.emailPlaceholder || "you@example.com"}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="telephone" className="block text-sm font-medium text-slate-700 mb-1">
+                    {t.telephone || 'Telephone'}
+                  </label>
+                  <input
+                    type="tel"
+                    id="telephone"
+                    value={formData.telephone}
+                    onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    placeholder={t.telephonePlaceholder || "Your phone number (optional)"}
                   />
                 </div>
 
