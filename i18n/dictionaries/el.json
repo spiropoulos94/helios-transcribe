@@ -80,7 +80,24 @@
     },
     "ctaSection": {
       "title": "Πάμε να ξεκινήσουμε;",
-      "subtitle": "Δοκιμάστε το Grecho στην ομάδα σας και δείτε πόσο χρόνο μπορείτε να κερδίσετε."
+      "subtitle": "Δοκιμάστε το Grecho στην ομάδα σας και δείτε πόσο χρόνο μπορείτε να κερδίσετε.",
+      "cta": "Θέλω να το δοκιμάσω"
+    },
+    "contactForm": {
+      "title": "Αίτηση Πρόσβασης",
+      "subtitle": "Συμπληρώστε τη φόρμα και θα επικοινωνήσουμε σύντομα μαζί σας.",
+      "name": "Όνομα",
+      "namePlaceholder": "Το όνομά σας",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "organization": "Οργανισμός",
+      "organizationPlaceholder": "Ο οργανισμός σας (προαιρετικά)",
+      "message": "Μήνυμα",
+      "messagePlaceholder": "Πείτε μας τις ανάγκες σας (προαιρετικά)",
+      "submit": "Αποστολή",
+      "submitting": "Αποστολή...",
+      "success": "Ευχαριστούμε! Θα επικοινωνήσουμε σύντομα.",
+      "error": "Κάτι πήγε στραβά. Δοκιμάστε ξανά."
     },
     "aboutSection": {
       "title": "Από την Ελλάδα, για τα Ελληνικά",
@@ -165,6 +182,25 @@
     "transcribe": "Νέα Μεταγραφή",
     "library": "Αρχείο",
     "about": "Σχετικά"
+  },
+  "auth": {
+    "login": "Σύνδεση",
+    "logout": "Αποσύνδεση",
+    "register": "Δημιουργία Λογαριασμού",
+    "email": "Email",
+    "password": "Κωδικός",
+    "confirmPassword": "Επιβεβαίωση Κωδικού",
+    "loginSubtitle": "Καλώς ήρθατε ξανά",
+    "registerSubtitle": "Ξεκινήστε με το Grecho",
+    "invalidCredentials": "Λάθος email ή κωδικός",
+    "error": "Προέκυψε ένα σφάλμα",
+    "signingIn": "Σύνδεση...",
+    "creatingAccount": "Δημιουργία λογαριασμού...",
+    "noAccount": "Δεν έχετε λογαριασμό;",
+    "haveAccount": "Έχετε ήδη λογαριασμό;",
+    "passwordMismatch": "Οι κωδικοί δεν ταιριάζουν",
+    "passwordTooShort": "Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες",
+    "registrationFailed": "Η εγγραφή απέτυχε"
   },
   "footer": {
     "madeWith": "Φτιαγμένο με",

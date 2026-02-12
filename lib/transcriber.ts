@@ -138,9 +138,13 @@ export class Transcriber {
       fileName: input.fileName,
     };
 
+    const useAsyncMode = !!process.env.ELEVENLABS_WEBHOOK_SECRET;
+
     const provider = new ElevenLabsProvider({
       model: pipelineConfig.elevenLabsModel,
       timeoutMs: 2 * 60 * 60 * 1000, // 2 hours for very long audio files
+      // Use async webhook mode if ELEVENLABS_WEBHOOK_SECRET is set
+      useAsyncMode,
     });
 
     const result = await provider.transcribe(transcriptionInput, {

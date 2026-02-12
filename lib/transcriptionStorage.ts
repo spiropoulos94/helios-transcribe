@@ -5,7 +5,7 @@
 
 import { StructuredTranscription } from './ai/types';
 
-const DB_NAME = 'helios-transcription-storage';
+const DB_NAME = 'grecho-transcription-storage';
 const DB_VERSION = 1;
 const STORE_NAME = 'transcriptions';
 
@@ -419,7 +419,7 @@ export async function updateTranscriptionEditorState(
 export async function migrateFromLocalStorage(): Promise<number> {
   if (typeof window === 'undefined') return 0;
 
-  const LEGACY_STORAGE_KEY = 'helios_transcriptions';
+  const LEGACY_STORAGE_KEY = 'grecho_transcriptions';
 
   try {
     const legacyData = localStorage.getItem(LEGACY_STORAGE_KEY);

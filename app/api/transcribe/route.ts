@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Transcriber } from '@/lib/transcriber';
+import { requireAuth } from '@/lib/auth-utils';
 
 /**
  * POST /api/transcribe
@@ -7,6 +8,12 @@ import { Transcriber } from '@/lib/transcriber';
  * Configuration comes from environment variables
  */
 export async function POST(request: NextRequest) {
+  // Check authentication
+  const authResult = await requireAuth();
+  if (!authResult.authorized) {
+    return authResult.response;
+  }
+
   try {
     // Parse form data
     const formData = await request.formData();

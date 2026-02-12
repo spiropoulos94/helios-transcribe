@@ -80,7 +80,24 @@
     },
     "ctaSection": {
       "title": "Ready for a pilot?",
-      "subtitle": "Grecho is available through direct onboarding and pilot programs for institutions and professional teams."
+      "subtitle": "Grecho is available through direct onboarding and pilot programs for institutions and professional teams.",
+      "cta": "Request Access"
+    },
+    "contactForm": {
+      "title": "Request Access",
+      "subtitle": "Fill out the form below and we'll get back to you shortly.",
+      "name": "Name",
+      "namePlaceholder": "Your name",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "organization": "Organization",
+      "organizationPlaceholder": "Your organization (optional)",
+      "message": "Message",
+      "messagePlaceholder": "Tell us about your needs (optional)",
+      "submit": "Send Request",
+      "submitting": "Sending...",
+      "success": "Thank you! We'll be in touch soon.",
+      "error": "Something went wrong. Please try again."
     },
     "aboutSection": {
       "title": "Made in Greece, for Greek",
@@ -165,6 +182,25 @@
     "transcribe": "Transcribe",
     "library": "Library",
     "about": "About"
+  },
+  "auth": {
+    "login": "Sign In",
+    "logout": "Sign Out",
+    "register": "Create Account",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "loginSubtitle": "Welcome back",
+    "registerSubtitle": "Get started with Grecho",
+    "invalidCredentials": "Invalid email or password",
+    "error": "An error occurred",
+    "signingIn": "Signing in...",
+    "creatingAccount": "Creating account...",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "passwordMismatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "registrationFailed": "Registration failed"
   },
   "footer": {
     "madeWith": "Made with",

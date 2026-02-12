@@ -4,9 +4,16 @@ import { OfficialMinutesRequest, OfficialMinutesResponse } from '@/lib/export/ty
 import { buildOfficialMinutesPrompt } from '@/lib/export/officialMinutesPrompt';
 import { formatTranscriptionForMinutes } from '@/lib/export/formatTranscriptionForMinutes';
 import { aiConfig } from '@/lib/config';
+import { requireAuth } from '@/lib/auth-utils';
 
 export async function POST(request: NextRequest): Promise<NextResponse<OfficialMinutesResponse>> {
   const startTime = Date.now();
+
+  // Check authentication
+  const authResult = await requireAuth();
+  if (!authResult.authorized) {
+    return authResult.response as NextResponse<OfficialMinutesResponse>;
+  }
 
   try {
     // Validate API key

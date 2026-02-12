@@ -4,9 +4,16 @@ import { PressReleaseRequest, PressReleaseResponse } from '@/lib/export/pressRel
 import { buildPressReleasePrompt } from '@/lib/export/pressReleasePrompt';
 import { formatTranscriptionForMinutes } from '@/lib/export/formatTranscriptionForMinutes';
 import { aiConfig } from '@/lib/config';
+import { requireAuth } from '@/lib/auth-utils';
 
 export async function POST(request: NextRequest): Promise<NextResponse<PressReleaseResponse>> {
   const startTime = Date.now();
+
+  // Check authentication
+  const authResult = await requireAuth();
+  if (!authResult.authorized) {
+    return authResult.response as NextResponse<PressReleaseResponse>;
+  }
 
   try {
     // Validate API key

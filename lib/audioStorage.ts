@@ -3,7 +3,7 @@
  * Provides persistent storage for audio files associated with transcriptions
  */
 
-const DB_NAME = 'helios-audio-storage';
+const DB_NAME = 'grecho-audio-storage';
 const DB_VERSION = 1;
 const STORE_NAME = 'audio-files';
 

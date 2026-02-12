@@ -2,9 +2,11 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { Header } from '@/components/Header';
+import { Providers } from '@/components/Providers';
 import { i18n, type Locale } from '@/i18n/config';
 import { getDictionary } from '@/i18n/dictionaries';
 import { TranslationsProvider } from '@/contexts/TranslationsContext';
+import { auth } from '@/auth';
 import '../globals.css';
 
 const inter = Inter({
@@ -29,12 +31,13 @@ export default async function RootLayout({
   params: Promise<{ lang: string }>;
 }) {
   const { lang } = await params as { lang: Locale };
-  const dict = await getDictionary(lang);
+  const [dict, session] = await Promise.all([getDictionary(lang), auth()]);
 
   return (
     <html lang={lang} className={inter.className}>
       <body className="bg-slate-50 text-slate-900 antialiased flex flex-col min-h-screen">
-        <TranslationsProvider translations={dict} lang={lang}>
+        <Providers session={session}>
+          <TranslationsProvider translations={dict} lang={lang}>
           <Toaster
             position="top-center"
             toastOptions={{
@@ -64,6 +67,7 @@ export default async function RootLayout({
             {children}
           </div>
         </TranslationsProvider>
+        </Providers>
       </body>
     </html>
   );
