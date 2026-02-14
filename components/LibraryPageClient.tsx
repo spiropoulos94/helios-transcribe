@@ -13,6 +13,7 @@ import {
 } from '@/lib/transcriptionStorage';
 import Link from 'next/link';
 import { useTranslations } from '@/contexts/TranslationsContext';
+import { localePath } from '@/i18n/config';
 
 const PAGE_SIZE = 20;
 
@@ -127,7 +128,7 @@ export default function LibraryPageClient() {
               {t.library.empty.subtitle}
             </p>
             <Link
-              href={`/${lang}`}
+              href={localePath('/', lang)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all"
             >
               {t.library.empty.button}

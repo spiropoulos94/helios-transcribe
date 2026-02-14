@@ -7,93 +7,67 @@ import { auth } from './auth';
 const publicRoutes = ['/', '/login', '/register', '/landing'];
 const publicApiRoutes = ['/api/auth', '/api/register', '/api/webhooks', '/api/contact'];
 
-function getLocale(request: NextRequest): string {
-  const pathname = request.nextUrl.pathname;
-  const pathnameLocale = i18n.locales.find(
-    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
-  );
+function isPublicRoute(path: string): boolean {
+  return publicRoutes.some(route => path === route || path.startsWith(route + '/'));
+}
 
-  if (pathnameLocale) return pathnameLocale;
-
-  const localeCookie = request.cookies.get('NEXT_LOCALE')?.value;
-  if (localeCookie && i18n.locales.includes(localeCookie as typeof i18n.locales[number])) {
-    return localeCookie;
-  }
-
-  const acceptLanguage = request.headers.get('accept-language');
-  if (acceptLanguage) {
-    const browserLocale = acceptLanguage.split(',')[0].split('-')[0];
-    if (i18n.locales.includes(browserLocale as typeof i18n.locales[number])) {
-      return browserLocale;
-    }
-  }
-
-  return i18n.defaultLocale;
+function isPublicApiRoute(path: string): boolean {
+  return publicApiRoutes.some(route => path.startsWith(route));
 }
 
 export async function proxy(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
+  const { pathname } = request.nextUrl;
 
-  // Skip proxy for static files and _next
+  // Skip static files and _next
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/logo') ||
-    pathname.includes('.') && !pathname.includes('/api/')
+    (pathname.includes('.') && !pathname.includes('/api/'))
   ) {
     return NextResponse.next();
   }
 
-  // Remove language prefix for route matching
-  const pathWithoutLang = pathname.replace(/^\/(en|el)/, '') || '/';
-
-  // Check if it's a public route
-  const isPublicRoute = publicRoutes.some(
-    (route) => pathWithoutLang === route || pathWithoutLang.startsWith(route + '/')
-  );
-
-  // Check if it's a public API route
-  const isPublicApiRoute = publicApiRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
-
-  // Check authentication for protected routes
-  if (!isPublicRoute && !isPublicApiRoute) {
-    const session = await auth();
-
-    if (!session) {
-      // For API routes, return 401
-      if (pathname.startsWith('/api/')) {
+  // API routes: just check auth
+  if (pathname.startsWith('/api')) {
+    if (!isPublicApiRoute(pathname)) {
+      const session = await auth();
+      if (!session) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
+    }
+    return NextResponse.next();
+  }
 
-      // For page routes, redirect to login
-      const lang = pathname.match(/^\/(en|el)/)?.[1] || getLocale(request);
-      const loginUrl = new URL(`/${lang}/login`, request.url);
+  // Redirect /el/... to /... (Greek is default, no prefix needed)
+  if (pathname.startsWith('/el/') || pathname === '/el') {
+    return NextResponse.redirect(new URL(pathname.replace(/^\/el/, '') || '/', request.url));
+  }
+
+  // Determine locale and path without prefix
+  const isEnglish = pathname.startsWith('/en/') || pathname === '/en';
+  const pathWithoutLocale = isEnglish ? pathname.replace(/^\/en/, '') || '/' : pathname;
+
+  // Check authentication for protected routes
+  if (!isPublicRoute(pathWithoutLocale)) {
+    const session = await auth();
+    if (!session) {
+      const loginPath = isEnglish ? '/en/login' : '/login';
+      const loginUrl = new URL(loginPath, request.url);
       loginUrl.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(loginUrl);
     }
   }
 
-  // Handle locale routing for non-API routes
-  if (!pathname.startsWith('/api')) {
-    const pathnameHasLocale = i18n.locales.some(
-      (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
+  // For Greek (default): rewrite internally to /el/...
+  if (!isEnglish) {
+    return NextResponse.rewrite(
+      new URL(`/${i18n.defaultLocale}${pathname === '/' ? '' : pathname}`, request.url)
     );
-
-    if (!pathnameHasLocale) {
-      const locale = getLocale(request);
-      const newUrl = new URL(`/${locale}${pathname}`, request.url);
-      const response = NextResponse.redirect(newUrl);
-      response.cookies.set('NEXT_LOCALE', locale);
-      return response;
-    }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|logo).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|logo).*)'],
 };

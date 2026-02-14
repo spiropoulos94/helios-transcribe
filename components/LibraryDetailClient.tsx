@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useTranslations } from '@/contexts/TranslationsContext';
+import { localePath } from '@/i18n/config';
 import { useTranscriptionDetail } from '@/lib/hooks/useTranscriptionDetail';
 import TranscriptionEditor from './editor/TranscriptionEditor';
 import LegacyTranscriptView from './LegacyTranscriptView';
@@ -34,7 +35,7 @@ export default function LibraryDetailClient({ id }: LibraryDetailClientProps) {
             <h1 className="text-3xl font-bold text-slate-900 mb-3">{t.libraryDetail?.notFoundTitle}</h1>
             <p className="text-slate-600 mb-8 max-w-md mx-auto">{t.libraryDetail?.notFoundDescription}</p>
             <Link
-              href={`/${lang}/library`}
+              href={localePath('/library', lang)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all"
             >
               <ArrowLeft className="w-4 h-4" />

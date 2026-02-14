@@ -4,6 +4,7 @@ import { FileText, Download, Trash2, ArrowRight } from 'lucide-react';
 import { TranscriptionListItem, getTranscriptionById } from '@/lib/transcriptionStorage';
 import { useFileDownload } from '@/lib/hooks/useFileDownload';
 import { useTranslations } from '@/contexts/TranslationsContext';
+import { localePath } from '@/i18n/config';
 import MetadataBadges from './shared/MetadataBadges';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -79,7 +80,7 @@ export const TranscriptionCard: React.FC<TranscriptionCardProps> = ({ transcript
         onConfirm={confirmDelete}
         onCancel={() => setShowDeleteDialog(false)}
       />
-      <Link href={`/${lang}/library/${transcription.id}`} className="block group">
+      <Link href={localePath(`/library/${transcription.id}`, lang)} className="block group">
         <div className="bg-white rounded-xl shadow-sm hover:shadow-md border border-slate-200 transition-all duration-200 group-hover:border-blue-300">
           <div className="p-4 border-b border-slate-100">
             <div className="flex items-start justify-between gap-3 mb-3">

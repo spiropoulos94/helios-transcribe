@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { TranscriptionResult } from '@/types';
 import { useTranslations } from '@/contexts/TranslationsContext';
+import { localePath } from '@/i18n/config';
 import ResultCard from './ResultCard';
 
 interface ResultsViewProps {
@@ -33,7 +34,7 @@ export default function ResultsView({ results, onReset }: ResultsViewProps) {
         </button>
         <span className="text-slate-300">•</span>
         <Link
-          href={`/${lang}/library`}
+          href={localePath('/library', lang)}
           className="text-blue-600 hover:text-blue-700 font-medium text-sm border-b border-transparent hover:border-blue-300 transition-all"
         >
           {t.transcribe.completed.viewAll}

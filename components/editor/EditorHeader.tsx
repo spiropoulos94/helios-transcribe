@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { ArrowLeft, Trash2, CheckCircle, Keyboard, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { SavedTranscription, deleteTranscription, TranscriptionEditorState } from '@/lib/transcriptionStorage';
 import { useTranslations } from '@/contexts/TranslationsContext';
+import { localePath } from '@/i18n/config';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 import BulkApprovalMenu from './BulkApprovalMenu';
 import ExportMenu from './ExportMenu';
@@ -48,7 +49,7 @@ export default function EditorHeader({
 
   const confirmDelete = async () => {
     await deleteTranscription(transcription.id);
-    router.push(`/${lang}/library`);
+    router.push(localePath('/library', lang));
   };
 
   const handleFinalizeWithWarning = () => {
@@ -108,7 +109,7 @@ export default function EditorHeader({
         {/* Row 1: Back Button + File Info + Primary Actions */}
         <div className="flex items-center justify-between gap-2 sm:gap-3 mb-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            <Link href={`/${lang}/library`} className="inline-flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors shrink-0">
+            <Link href={localePath('/library', lang)} className="inline-flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors shrink-0">
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">{t.libraryDetail?.backToLibrary || 'Back to Library'}</span>
             </Link>

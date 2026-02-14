@@ -8,6 +8,7 @@ import { Library, Menu, X, LogIn, LogOut, FileAudio } from 'lucide-react';
 import Logo from './Logo';
 import { LanguageToggle } from './LanguageToggle';
 import { useTranslations } from '@/contexts/TranslationsContext';
+import { localePath } from '@/i18n/config';
 
 export const Header: React.FC = () => {
   const { t, lang } = useTranslations();
@@ -18,18 +19,18 @@ export const Header: React.FC = () => {
   const isAuthenticated = status === 'authenticated';
 
   const navItems = [
-    { href: `/${lang}/transcribe`, label: t.header.transcribe, icon: FileAudio },
-    { href: `/${lang}/library`, label: t.header.library, icon: Library },
+    { href: localePath('/transcribe', lang), label: t.header.transcribe, icon: FileAudio },
+    { href: localePath('/library', lang), label: t.header.library, icon: Library },
   ];
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: `/${lang}` });
+    await signOut({ callbackUrl: localePath('/', lang) });
   };
 
   return (
     <header className="w-full py-3 px-4 sm:px-8 border-b border-slate-200 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 sm:gap-8">
-        <Link href={`/${lang}`} className="flex items-center gap-3 shrink-0 hover:opacity-90 transition-opacity">
+        <Link href={localePath('/', lang)} className="flex items-center gap-3 shrink-0 hover:opacity-90 transition-opacity">
           <Logo width={125} />
         </Link>
 
@@ -69,7 +70,7 @@ export const Header: React.FC = () => {
             </button>
           ) : (
             <Link
-              href={`/${lang}/login`}
+              href={localePath('/login', lang)}
               className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
             >
               <LogIn className="w-5 h-5" />
@@ -121,7 +122,7 @@ export const Header: React.FC = () => {
               </button>
             ) : (
               <Link
-                href={`/${lang}/login`}
+                href={localePath('/login', lang)}
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
               >

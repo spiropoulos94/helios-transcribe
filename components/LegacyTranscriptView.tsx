@@ -18,6 +18,7 @@ import {
 import { SavedTranscription, deleteTranscription } from '@/lib/transcriptionStorage';
 import { calculateTranscriptionCost } from '@/lib/pricing/calculator';
 import { useTranslations } from '@/contexts/TranslationsContext';
+import { localePath } from '@/i18n/config';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 interface LegacyTranscriptViewProps {
@@ -58,7 +59,7 @@ export default function LegacyTranscriptView({
   const confirmDelete = async () => {
     setIsDeleting(true);
     await deleteTranscription(transcription.id);
-    router.push(`/${lang}/library`);
+    router.push(localePath('/library', lang));
   };
 
   const formatDate = (timestamp: number) => {
@@ -110,7 +111,7 @@ export default function LegacyTranscriptView({
         <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Navigation Bar */}
         <div className="flex items-center mb-6 animate-in fade-in slide-in-from-bottom-4">
-          <Link href={`/${lang}/library`} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+          <Link href={localePath('/library', lang)} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
             <ArrowLeft className="w-4 h-4" />
             {t.libraryDetail?.backToLibrary}
           </Link>

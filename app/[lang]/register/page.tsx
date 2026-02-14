@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from '@/contexts/TranslationsContext';
+import { localePath } from '@/i18n/config';
 import Logo from '@/components/Logo';
 
 export default function RegisterPage() {
@@ -46,7 +47,7 @@ export default function RegisterPage() {
         return;
       }
 
-      router.push(`/${lang}/login?registered=true`);
+      router.push(localePath('/login?registered=true', lang));
     } catch {
       setError(t.auth?.error || 'An error occurred');
     } finally {
@@ -135,7 +136,7 @@ export default function RegisterPage() {
           <p className="mt-8 text-center text-slate-600">
             {t.auth?.haveAccount || 'Already have an account?'}{' '}
             <Link
-              href={`/${lang}/login`}
+              href={localePath('/login', lang)}
               className="text-blue-600 hover:text-blue-700 font-medium"
             >
               {t.auth?.login || 'Sign In'}

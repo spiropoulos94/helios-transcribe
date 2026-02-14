@@ -5,13 +5,14 @@ import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from '@/contexts/TranslationsContext';
+import { localePath } from '@/i18n/config';
 import Logo from '@/components/Logo';
 
 function LoginForm() {
   const { t, lang } = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || `/${lang}/transcribe`;
+  const callbackUrl = searchParams.get('callbackUrl') || localePath('/transcribe', lang);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -111,7 +112,7 @@ function LoginForm() {
           <p className="mt-8 text-center text-slate-600">
             {t.auth?.noAccount || "Don't have an account?"}{' '}
             <Link
-              href={`/${lang}/register`}
+              href={localePath('/register', lang)}
               className="text-blue-600 hover:text-blue-700 font-medium"
             >
               {t.auth?.register || 'Sign Up'}
