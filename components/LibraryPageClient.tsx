@@ -128,7 +128,7 @@ export default function LibraryPageClient() {
               {t.library.empty.subtitle}
             </p>
             <Link
-              href={localePath('/', lang)}
+              href={localePath('/transcribe', lang)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all"
             >
               {t.library.empty.button}
