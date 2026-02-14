@@ -14,10 +14,26 @@ const inter = Inter({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  title: 'GrechoAI - YouTube to Greek',
-  description: 'AI-Powered Greek Transcription using Gemini 2.5 Flash',
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang } = await params;
+
+  const metadata = {
+    el: {
+      title: 'Grecho - Ελληνική Απομαγνητοφώνηση',
+      description: 'Μετατρέψτε ήχο και βίντεο σε ακριβείς ελληνικές απομαγνητοφωνήσεις με τεχνητή νοημοσύνη. Γρήγορα, αξιόπιστα και σχεδιασμένα για την ελληνική γλώσσα.',
+    },
+    en: {
+      title: 'Grecho - Greek Transcription',
+      description: 'Transform audio and video into accurate Greek transcriptions powered by AI. Fast, reliable, and designed for the Greek language.',
+    },
+  };
+
+  return metadata[lang as keyof typeof metadata] || metadata.el;
+}
 
 export async function generateStaticParams() {
   return i18n.locales.map((locale) => ({ lang: locale }));
