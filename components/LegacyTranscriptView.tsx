@@ -142,9 +142,9 @@ export default function LegacyTranscriptView({
                     {transcription.metadata?.audioDurationSeconds && transcription.metadata?.pricing && (
                       <div className="flex items-center gap-2"><span className="text-emerald-600 font-semibold">💰 ${calculateTranscriptionCost(transcription.metadata.audioDurationSeconds, transcription.metadata.pricing)}</span></div>
                     )}
-                    {transcription.metadata?.model && (
+                    {/* {transcription.metadata?.model && (
                       <div className="flex items-center gap-2"><span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">{transcription.metadata.model}</span></div>
-                    )}
+                    )} */}
                   </div>
                 </div>
               </div>
@@ -177,7 +177,7 @@ export default function LegacyTranscriptView({
           {/* Footer */}
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 text-xs text-slate-400 flex items-center justify-between">
             <div className="flex items-center gap-2"><FileText className="w-3 h-3" /></div>
-            <span>GrechoAI</span>
+            <span>Grecho</span>
           </div>
         </div>
       </main>

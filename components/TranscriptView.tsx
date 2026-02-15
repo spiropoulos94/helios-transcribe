@@ -93,7 +93,7 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({ result }) => {
             <div className="flex items-center gap-2">
                 <FileText className="w-3 h-3" />
             </div>
-            <span>GrechoAI</span>
+            <span>Grecho</span>
         </div>
       </div>
     </div>

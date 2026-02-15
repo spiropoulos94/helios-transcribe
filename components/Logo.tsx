@@ -14,7 +14,7 @@ export default function Logo({ width = 200 }: LogoProps = { width: 200 }) {
     >
       <Image
         src="/logo/grecho-logo-transparent.svg"
-        alt="GrechoAI Logo"
+        alt="Grecho Logo"
         width={width } // Slightly smaller than container for padding
         height={height }
         priority

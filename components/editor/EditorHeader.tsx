@@ -116,11 +116,11 @@ export default function EditorHeader({
 
             <div className="text-sm text-slate-600 truncate min-w-0">
               <span className="font-medium truncate block sm:inline">{transcription.fileName}</span>
-              {transcription.metadata?.model && (
+              {/* {transcription.metadata?.model && (
                 <span className="hidden sm:inline ml-2 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">
                   {transcription.metadata.model}
                 </span>
-              )}
+              )} */}
             </div>
           </div>
 

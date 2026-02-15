@@ -19,6 +19,11 @@ export default function MetadataBadges({ metadata }: MetadataBadgesProps) {
 
   return (
     <div className="flex flex-wrap gap-2">
+      {/* {metadata.model && (
+        <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">
+          {metadata.model}
+        </span>
+      )} */}
       {metadata.audioDurationSeconds && (
         <span className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-700 text-xs">
           🎵 {formatDuration(metadata.audioDurationSeconds)}
