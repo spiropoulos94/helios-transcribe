@@ -22,12 +22,14 @@ interface SegmentListProps {
   currentSearchMatch: SearchMatchEvent | null;
   isPlaying: boolean;
   isEditRequested: boolean;
+  editingSegmentIndex: number | null;
   onApprove: (index: number) => void;
   onUnapprove: (index: number) => void;
   onEdit: (index: number, newText: string) => void;
   onSegmentClick: (segment: TranscriptionSegment) => void;
   onEditRequestHandled: () => void;
   onSeekEventHandled: () => void;
+  onEditingChange: (index: number | null) => void;
   getSpeakerDisplayName?: (originalId: string) => string;
   onLabelSpeaker?: (originalId: string, customName: string) => void;
 }
@@ -41,12 +43,14 @@ export default function SegmentList({
   currentSearchMatch,
   isPlaying,
   isEditRequested,
+  editingSegmentIndex,
   onApprove,
   onUnapprove,
   onEdit,
   onSegmentClick,
   onEditRequestHandled,
   onSeekEventHandled,
+  onEditingChange,
   getSpeakerDisplayName,
   onLabelSpeaker,
 }: SegmentListProps) {
@@ -92,12 +96,12 @@ export default function SegmentList({
     }
   }, [seekEvent?.id, scrollToSegment, onSeekEventHandled]);
 
-  // Auto-scroll during playback
+  // Auto-scroll during playback (disabled when editing a segment)
   useEffect(() => {
-    if (activeSegmentIndex !== null) {
+    if (activeSegmentIndex !== null && editingSegmentIndex === null) {
       scrollToSegment(activeSegmentIndex);
     }
-  }, [activeSegmentIndex, scrollToSegment]);
+  }, [activeSegmentIndex, scrollToSegment, editingSegmentIndex]);
 
   // Scroll to search match
   useEffect(() => {
@@ -149,6 +153,7 @@ export default function SegmentList({
                   isActive={activeSegmentIndex === index}
                   isPlaying={isPlaying}
                   isEditRequested={isEditRequested && activeSegmentIndex === index}
+                  editingSegmentIndex={editingSegmentIndex}
                   speakerColor={speakerColorMap[segment.speaker]}
                   searchMatch={currentSearchMatch?.segmentIndex === index ? currentSearchMatch : null}
                   onApprove={onApprove}
@@ -156,6 +161,7 @@ export default function SegmentList({
                   onEdit={onEdit}
                   onSegmentClick={onSegmentClick}
                   onEditRequestHandled={onEditRequestHandled}
+                  onEditingChange={onEditingChange}
                   getSpeakerDisplayName={getSpeakerDisplayName}
                   onLabelSpeaker={onLabelSpeaker}
                 />

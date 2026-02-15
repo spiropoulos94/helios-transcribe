@@ -79,8 +79,10 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     activeSegmentIndex,
     isEditRequested,
     seekEvent,
+    editingSegmentIndex,
     setIsPlaying,
     setIsEditRequested,
+    setEditingSegmentIndex,
     handleTimeUpdate,
     handleSeek,
     handleSegmentClick,
@@ -88,6 +90,12 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     playFromActiveSegment,
     clearSeekEvent,
   } = useAudioSync(segments);
+
+  // Wrap handleTimeUpdate to pass audioRef for loop functionality
+  const handleTimeUpdateWithRef = useCallback(
+    (time: number) => handleTimeUpdate(time, audioRef),
+    [handleTimeUpdate]
+  );
 
   // Search functionality
   const {
@@ -256,7 +264,7 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
         <AudioPlayer
           ref={audioRef}
           audioFileId={editorState.audioFileId}
-          onTimeUpdate={handleTimeUpdate}
+          onTimeUpdate={handleTimeUpdateWithRef}
           onSeek={handleSeek}
           onPlayingChange={setIsPlaying}
           compact
@@ -268,7 +276,7 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
           <AudioPlayer
             ref={audioRef}
             audioFileId={editorState.audioFileId}
-            onTimeUpdate={handleTimeUpdate}
+            onTimeUpdate={handleTimeUpdateWithRef}
             onSeek={handleSeek}
             onPlayingChange={setIsPlaying}
           />
@@ -294,12 +302,14 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
             currentSearchMatch={currentMatch}
             isPlaying={isPlaying}
             isEditRequested={isEditRequested}
+            editingSegmentIndex={editingSegmentIndex}
             onApprove={handleApprove}
             onUnapprove={handleUnapprove}
             onEdit={handleEdit}
             onSegmentClick={(segment) => handleSegmentClick(segment, audioRef)}
             onEditRequestHandled={() => setIsEditRequested(false)}
             onSeekEventHandled={clearSeekEvent}
+            onEditingChange={setEditingSegmentIndex}
             getSpeakerDisplayName={getSpeakerDisplayName}
             onLabelSpeaker={handleLabelSpeaker}
           />

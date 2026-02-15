@@ -21,6 +21,7 @@ interface SegmentCardProps {
   isActive: boolean;
   isPlaying: boolean;
   isEditRequested: boolean;
+  editingSegmentIndex: number | null;
   speakerColor: ColorScheme;
   searchMatch?: SearchMatchHighlight | null;
   onApprove?: (index: number) => void;
@@ -28,34 +29,47 @@ interface SegmentCardProps {
   onEdit?: (index: number, newText: string) => void;
   onSegmentClick: (segment: TranscriptionSegment) => void;
   onEditRequestHandled: () => void;
+  onEditingChange: (index: number | null) => void;
   getSpeakerDisplayName?: (originalId: string) => string;
   onLabelSpeaker?: (originalId: string, customName: string) => void;
 }
 
 function SegmentCard({
-  segment, index, approval, isActive, isPlaying, isEditRequested,
+  segment, index, approval, isActive, isPlaying, isEditRequested, editingSegmentIndex,
   speakerColor, searchMatch, onApprove, onUnapprove, onEdit, onSegmentClick, onEditRequestHandled,
-  getSpeakerDisplayName, onLabelSpeaker,
+  onEditingChange, getSpeakerDisplayName, onLabelSpeaker,
 }: SegmentCardProps) {
   const { t } = useTranslations();
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(approval.editedText || segment.text);
 
+  // Handle edit request from keyboard shortcut
   useEffect(() => {
     if (isEditRequested && isActive && !approval.approved && !isEditing) {
       setIsEditing(true);
+      onEditingChange(index);
       onEditRequestHandled();
     }
-  }, [isEditRequested, isActive, approval.approved, isEditing, onEditRequestHandled]);
+  }, [isEditRequested, isActive, approval.approved, isEditing, onEditRequestHandled, onEditingChange, index]);
+
+  // Close edit mode when another segment starts being edited
+  useEffect(() => {
+    if (isEditing && editingSegmentIndex !== null && editingSegmentIndex !== index) {
+      setEditedText(approval.editedText || segment.text);
+      setIsEditing(false);
+    }
+  }, [editingSegmentIndex, index, isEditing, approval.editedText, segment.text]);
 
   const handleSaveEdit = () => {
     onEdit?.(index, editedText);
     setIsEditing(false);
+    onEditingChange(null);
   };
 
   const handleCancelEdit = () => {
     setEditedText(approval.editedText || segment.text);
     setIsEditing(false);
+    onEditingChange(null);
   };
 
   const handleApproveToggle = () => {
@@ -102,8 +116,21 @@ function SegmentCard({
     );
   };
 
+  const handleCardClick = () => {
+    // If this segment is being edited, don't trigger click (user is interacting with form)
+    if (isEditing) return;
+
+    // If another segment is being edited, close it first by setting editing to this segment
+    // (the other segment will auto-close via the editingSegmentIndex effect)
+    if (editingSegmentIndex !== null && editingSegmentIndex !== index) {
+      onEditingChange(null);
+    }
+
+    onSegmentClick(segment);
+  };
+
   return (
-    <div className={`${getCardClasses()} relative`} onClick={() => onSegmentClick(segment)}>
+    <div className={`${getCardClasses()} relative`} onClick={handleCardClick}>
       {/* Now Playing indicator */}
       {isNowPlaying && (
         <div className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-md">
@@ -138,6 +165,7 @@ function SegmentCard({
               onClick={(e) => {
                 e.stopPropagation();
                 setIsEditing(true);
+                onEditingChange(index);
               }}
               className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             >

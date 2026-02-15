@@ -12,9 +12,11 @@ interface UseAudioSyncReturn {
   activeSegmentIndex: number | null;
   isEditRequested: boolean;
   seekEvent: SeekEvent | null;
+  editingSegmentIndex: number | null;
   setIsPlaying: (playing: boolean) => void;
   setIsEditRequested: (requested: boolean) => void;
-  handleTimeUpdate: (time: number) => void;
+  setEditingSegmentIndex: (index: number | null) => void;
+  handleTimeUpdate: (time: number, audioRef: React.RefObject<HTMLAudioElement | null>) => void;
   handleSeek: (time: number) => void;
   handleSegmentClick: (segment: TranscriptionSegment, audioRef: React.RefObject<HTMLAudioElement | null>) => void;
   navigateToSegment: (index: number, audioRef: React.RefObject<HTMLAudioElement | null>) => void;
@@ -32,6 +34,7 @@ export function useAudioSync(segments: TranscriptionSegment[]): UseAudioSyncRetu
   const [activeSegmentIndex, setActiveSegmentIndex] = useState<number | null>(null);
   const [isEditRequested, setIsEditRequested] = useState(false);
   const [seekEvent, setSeekEvent] = useState<SeekEvent | null>(null);
+  const [editingSegmentIndex, setEditingSegmentIndex] = useState<number | null>(null);
 
   const lastHighlightUpdateRef = useRef(0);
   const seekIdRef = useRef(0);
@@ -49,9 +52,19 @@ export function useAudioSync(segments: TranscriptionSegment[]): UseAudioSyncRetu
   }, []);
 
   // Called during audio playback - updates active segment with throttling
+  // When editing a segment, loops playback within that segment's bounds
   const handleTimeUpdate = useCallback(
-    (time: number) => {
+    (time: number, audioRef: React.RefObject<HTMLAudioElement | null>) => {
       setCurrentTime(time);
+
+      // If editing a segment, loop playback within its bounds
+      if (editingSegmentIndex !== null && audioRef?.current) {
+        const editingSegment = segments[editingSegmentIndex];
+        if (editingSegment && time > editingSegment.endTime) {
+          audioRef.current.currentTime = editingSegment.startTime;
+          return; // Don't update active segment while looping
+        }
+      }
 
       const now = Date.now();
       if (now - lastNavigationTimeRef.current < NAVIGATION_LOCK_DURATION) return;
@@ -62,7 +75,7 @@ export function useAudioSync(segments: TranscriptionSegment[]): UseAudioSyncRetu
         setActiveSegmentIndex(index === -1 ? null : index);
       }
     },
-    [findSegmentAtTime, activeSegmentIndex]
+    [findSegmentAtTime, activeSegmentIndex, editingSegmentIndex, segments]
   );
 
   // Called when user scrubs the audio slider
@@ -131,8 +144,10 @@ export function useAudioSync(segments: TranscriptionSegment[]): UseAudioSyncRetu
     activeSegmentIndex,
     isEditRequested,
     seekEvent,
+    editingSegmentIndex,
     setIsPlaying,
     setIsEditRequested,
+    setEditingSegmentIndex,
     handleTimeUpdate,
     handleSeek,
     handleSegmentClick,
