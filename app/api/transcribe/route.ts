@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Transcriber } from '@/lib/transcriber';
 import { requireAuth } from '@/lib/auth-utils';
 
+// Route segment config for App Router
+export const maxDuration = 7200; // 2 hours for very long audio files (Railway supports up to 6h)
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/transcribe
  * Transcribe audio from an uploaded file
