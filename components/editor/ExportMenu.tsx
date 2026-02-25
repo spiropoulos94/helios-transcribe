@@ -71,10 +71,11 @@ export default function ExportMenu({
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-0.5"
+        className="px-3 py-1.5 bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200 flex items-center gap-1.5"
         title={t.editor?.exportMenu || 'Export Options'}
       >
         <Download className="w-4 h-4" />
+        <span className="text-sm">{t.editor?.exportMenu || 'Export'}</span>
         <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
