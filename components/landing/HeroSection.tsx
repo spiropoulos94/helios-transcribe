@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Mail, ArrowRight } from 'lucide-react';
-import ContactFormModal from './ContactFormModal';
+import { useState } from "react";
+import { Mail, ArrowRight } from "lucide-react";
+import ContactFormModal from "./ContactFormModal";
 
 interface HeroSectionProps {
   translations: any;
@@ -20,7 +20,7 @@ export default function HeroSection({ translations: t }: HeroSectionProps) {
         </div>
 
         <div className="relative max-w-6xl mx-auto px-6 py-20">
-          <h1 className="text-6xl md:text-8xl font-black text-white mb-8 tracking-tight leading-none animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <h1 className="text-5xl md:text-8xl font-black text-white mb-8 tracking-tight leading-none animate-in fade-in slide-in-from-bottom-8 duration-700">
             {t.hero.title1}
             <br />
             <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-400 via-cyan-400 to-blue-500">
