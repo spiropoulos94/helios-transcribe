@@ -12,7 +12,6 @@ interface PressReleaseBasicInfoProps {
 export default function PressReleaseBasicInfo({ formState, updateField, t }: PressReleaseBasicInfoProps) {
   return (
     <div className="space-y-4">
-      {/* Required fields */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">
           {t.editor?.pressReleaseOrganization || 'Organization'} <span className="text-red-500">*</span>
@@ -65,47 +64,9 @@ export default function PressReleaseBasicInfo({ formState, updateField, t }: Pre
         </div>
       </div>
 
-      {/* Tone selector */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">
-          {t.editor?.pressReleaseTone || 'Tone'}
-        </label>
-        <div className="flex gap-2">
-          {(['formal', 'neutral', 'friendly'] as const).map((tone) => (
-            <button
-              key={tone}
-              type="button"
-              onClick={() => updateField('tone', tone)}
-              className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                formState.tone === tone
-                  ? 'bg-emerald-100 border-emerald-500 text-emerald-700'
-                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              {tone === 'formal' && (t.editor?.toneFormal || 'Formal')}
-              {tone === 'neutral' && (t.editor?.toneNeutral || 'Neutral')}
-              {tone === 'friendly' && (t.editor?.toneFriendly || 'Friendly')}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          {t.editor?.pressReleaseTargetAudience || 'Target Audience'}
-        </label>
-        <input
-          type="text"
-          value={formState.targetAudience}
-          onChange={(e) => updateField('targetAudience', e.target.value)}
-          placeholder="π.χ. Δημότες, ΜΜΕ, επιχειρήσεις"
-          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          {t.editor?.pressReleaseKeyPoints || 'Key Points to Emphasize'}
+          {t.editor?.pressReleaseKeyPoints || 'What should be emphasized?'}
         </label>
         <textarea
           value={formState.keyPoints}
@@ -116,7 +77,6 @@ export default function PressReleaseBasicInfo({ formState, updateField, t }: Pre
         />
       </div>
 
-      {/* Contact info */}
       <div className="pt-2">
         <h4 className="text-sm font-medium text-slate-700 mb-2">
           {t.editor?.pressReleaseContactInfo || 'Contact Information (optional)'}

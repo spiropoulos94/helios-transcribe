@@ -12,9 +12,10 @@ import {
   loadPressReleaseFormStateFromStorage,
 } from '@/lib/export/pressReleaseTypes';
 import { resolveSegmentsForExport } from '@/lib/export/types';
+import { saveUserDefaults } from '@/lib/export/userDefaults';
 import { getTranscriptionSummary, isTranscriptionTooLong } from '@/lib/export/formatTranscriptionForMinutes';
 import { TranscriptionSegment } from '@/lib/ai/types';
-import { SegmentApproval } from '@/lib/transcriptionStorage';
+import { SegmentEdit } from '@/lib/transcriptionStorage';
 import { ConfirmDialog } from './export';
 import { PressReleaseBasicInfo, PressReleaseGenerate } from './export/press-release';
 
@@ -22,7 +23,7 @@ interface PressReleaseDialogProps {
   isOpen: boolean;
   onClose: () => void;
   segments: TranscriptionSegment[];
-  approvals: SegmentApproval[];
+  edits: SegmentEdit[];
   getSpeakerDisplayName: (id: string) => string;
   fileName: string;
   transcriptionId: string;
@@ -32,7 +33,7 @@ export default function PressReleaseDialog({
   isOpen,
   onClose,
   segments,
-  approvals,
+  edits,
   getSpeakerDisplayName,
   fileName,
   transcriptionId,
@@ -103,7 +104,6 @@ export default function PressReleaseDialog({
         formState.organization.trim() !== '' ||
         formState.title.trim() !== '' ||
         formState.location.trim() !== '' ||
-        formState.targetAudience.trim() !== '' ||
         formState.keyPoints.trim() !== '' ||
         formState.contactName.trim() !== '' ||
         formState.contactEmail.trim() !== '' ||
@@ -150,7 +150,7 @@ export default function PressReleaseDialog({
     setFormState(prev => ({ ...prev, isGenerating: true, error: null }));
 
     try {
-      const resolvedSegs = resolveSegmentsForExport(segments, approvals, getSpeakerDisplayName);
+      const resolvedSegs = resolveSegmentsForExport(segments, edits, getSpeakerDisplayName);
       const metadata = extractPressReleaseMetadataFromFormState(formState);
 
       const response = await fetch('/api/export/press-release', {
@@ -167,6 +167,13 @@ export default function PressReleaseDialog({
       }
 
       setFormState(prev => ({ ...prev, generatedMarkdown: result.markdown, isGenerating: false }));
+      saveUserDefaults({
+        organization: formState.organization,
+        pressReleaseLocation: formState.location,
+        contactName: formState.contactName,
+        contactEmail: formState.contactEmail,
+        contactPhone: formState.contactPhone,
+      });
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         return;
@@ -179,7 +186,7 @@ export default function PressReleaseDialog({
     } finally {
       abortControllerRef.current = null;
     }
-  }, [segments, approvals, getSpeakerDisplayName, formState]);
+  }, [segments, edits, getSpeakerDisplayName, formState]);
 
   const handleDownload = async (format: DownloadFormat) => {
     if (!formState.generatedMarkdown) return;
@@ -199,8 +206,8 @@ export default function PressReleaseDialog({
 
   // Get transcription summary for display (memoized)
   const resolvedSegments = useMemo(
-    () => resolveSegmentsForExport(segments, approvals, getSpeakerDisplayName),
-    [segments, approvals, getSpeakerDisplayName]
+    () => resolveSegmentsForExport(segments, edits, getSpeakerDisplayName),
+    [segments, edits, getSpeakerDisplayName]
   );
   const summary = useMemo(() => getTranscriptionSummary(resolvedSegments), [resolvedSegments]);
   const isTooLong = useMemo(() => isTranscriptionTooLong(resolvedSegments), [resolvedSegments]);

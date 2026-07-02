@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useCallback, useMemo, useState } from 'react';
-import toast from 'react-hot-toast';
 import { SavedTranscription } from '@/lib/transcriptionStorage';
 import { SPEAKER_COLORS, ColorScheme } from '@/lib/editor/speakerColors';
 import { useEditorKeyboardShortcuts } from '@/lib/hooks/useEditorKeyboardShortcuts';
@@ -9,7 +8,6 @@ import { useEditorState } from '@/lib/hooks/useEditorState';
 import { useAudioSync } from '@/lib/hooks/useAudioSync';
 import { useSegmentSearch } from '@/lib/hooks/useSegmentSearch';
 import { useSpeakerSample } from '@/lib/hooks/useSpeakerSample';
-import { useTranslations } from '@/contexts/TranslationsContext';
 import EditorHeader from './EditorHeader';
 import AudioPlayer from './AudioPlayer';
 import SpeakerLegend from './SpeakerLegend';
@@ -34,40 +32,25 @@ function formatTime(seconds: number): string {
 }
 
 export default function TranscriptionEditor({ transcription }: TranscriptionEditorProps) {
-  const { t } = useTranslations();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [showOfficialMinutesDialog, setShowOfficialMinutesDialog] = useState(false);
   const [showPressReleaseDialog, setShowPressReleaseDialog] = useState(false);
 
-  // Get segments sorted by start time
   const segments = useMemo(() => {
     const rawSegments = transcription.metadata?.structuredData?.segments || [];
     return [...rawSegments].sort((a, b) => a.startTime - b.startTime);
   }, [transcription.metadata?.structuredData?.segments]);
 
-  // Editor state with speaker management
   const {
     editorState,
-    handleApprove,
-    handleUnapprove,
-    handleApproveAll,
-    handleUnapproveAll,
     handleEdit,
-    handleFinalize,
-    handleRevertToDraft,
-    approvedCount,
-    getNextUnapprovedIndex,
-    getPrevUnapprovedIndex,
     speakerLabels,
     handleLabelSpeaker,
     getSpeakerDisplayName,
     uniqueSpeakers,
     labeledCount,
-  } = useEditorState(transcription, segments, () =>
-    toast.success(t.editor?.finalizeSuccess || 'Transcription finalized successfully!')
-  );
+  } = useEditorState(transcription, segments);
 
-  // Speaker sample playback (always enabled for sidebar legend)
   const speakerSample = useSpeakerSample({
     segments,
     audioRef,
@@ -91,13 +74,11 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     clearSeekEvent,
   } = useAudioSync(segments);
 
-  // Wrap handleTimeUpdate to pass audioRef for loop functionality
   const handleTimeUpdateWithRef = useCallback(
     (time: number) => handleTimeUpdate(time, audioRef),
     [handleTimeUpdate]
   );
 
-  // Search functionality
   const {
     searchQuery,
     setSearchQuery,
@@ -109,9 +90,8 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     matchCount,
     goToNextMatch,
     goToPrevMatch,
-  } = useSegmentSearch(segments, editorState.approvals);
+  } = useSegmentSearch(segments, editorState.edits);
 
-  // Memoize speaker colors
   const speakerColorMap = useMemo(() => {
     const speakers: string[] = [];
     for (const segment of segments) {
@@ -124,12 +104,11 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     ) as Record<string, ColorScheme>;
   }, [segments]);
 
-  // Plain text export handler
   const handleExportPlainText = useCallback(() => {
     const exportText = segments
       .map((segment, index) => {
-        const approval = editorState.approvals[index];
-        const text = approval?.editedText || segment.text;
+        const edit = editorState.edits.find((e) => e.segmentIndex === index);
+        const text = edit?.editedText || segment.text;
         const speakerName = getSpeakerDisplayName(segment.speaker);
         return `${speakerName} [${formatTime(segment.startTime)} - ${formatTime(segment.endTime)}]:\n${text}\n`;
       })
@@ -139,31 +118,20 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${transcription.fileName.replace(/\.[^/.]+$/, '')}_approved.txt`;
+    a.download = `${transcription.fileName.replace(/\.[^/.]+$/, '')}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [segments, editorState.approvals, transcription.fileName, getSpeakerDisplayName]);
+  }, [segments, editorState.edits, transcription.fileName, getSpeakerDisplayName]);
 
-  // Official minutes export handler
   const handleExportOfficialMinutes = useCallback(() => {
     setShowOfficialMinutesDialog(true);
   }, []);
 
-  // Press release export handler
   const handleExportPressRelease = useCallback(() => {
     setShowPressReleaseDialog(true);
   }, []);
-
-  // Keyboard shortcut handlers
-  const handleKeyboardApprove = useCallback(() => {
-    if (activeSegmentIndex !== null) {
-      editorState.approvals[activeSegmentIndex]?.approved
-        ? handleUnapprove(activeSegmentIndex)
-        : handleApprove(activeSegmentIndex);
-    }
-  }, [activeSegmentIndex, editorState.approvals, handleApprove, handleUnapprove]);
 
   const handleKeyboardEdit = useCallback(() => {
     if (activeSegmentIndex !== null) {
@@ -182,22 +150,6 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     navigateToSegment(prevIndex, audioRef);
   }, [activeSegmentIndex, navigateToSegment]);
 
-  const handleNextUnapproved = useCallback(() => {
-    const currentIndex = activeSegmentIndex ?? -1;
-    const nextIndex = getNextUnapprovedIndex(currentIndex);
-    if (nextIndex !== null) {
-      navigateToSegment(nextIndex, audioRef);
-    }
-  }, [activeSegmentIndex, getNextUnapprovedIndex, navigateToSegment]);
-
-  const handlePrevUnapproved = useCallback(() => {
-    const currentIndex = activeSegmentIndex ?? segments.length;
-    const prevIndex = getPrevUnapprovedIndex(currentIndex);
-    if (prevIndex !== null) {
-      navigateToSegment(prevIndex, audioRef);
-    }
-  }, [activeSegmentIndex, segments.length, getPrevUnapprovedIndex, navigateToSegment]);
-
   const handlePlayPause = useCallback(() => {
     if (audioRef.current) {
       if (audioRef.current.paused) {
@@ -215,12 +167,9 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
   }, [isSearchOpen, closeSearch]);
 
   useEditorKeyboardShortcuts({
-    onApprove: handleKeyboardApprove,
     onEdit: handleKeyboardEdit,
     onNextSegment: handleNextSegment,
     onPrevSegment: handlePrevSegment,
-    onNextUnapproved: handleNextUnapproved,
-    onPrevUnapproved: handlePrevUnapproved,
     onPlayPause: handlePlayPause,
     onSearch: openSearch,
     onEscape: handleEscape,
@@ -243,20 +192,11 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
         <EditorHeader
           transcription={transcription}
           editorState={editorState}
-          totalSegments={segments.length}
-          approvedCount={approvedCount}
           labeledCount={labeledCount}
           totalSpeakers={uniqueSpeakers.length}
-          onFinalize={handleFinalize}
-          onRevertToDraft={handleRevertToDraft}
           onExportPlainText={handleExportPlainText}
           onExportOfficialMinutes={handleExportOfficialMinutes}
           onExportPressRelease={handleExportPressRelease}
-          onApproveAll={handleApproveAll}
-          onUnapproveAll={handleUnapproveAll}
-          onNextUnapproved={handleNextUnapproved}
-          onPrevUnapproved={handlePrevUnapproved}
-          hasUnapproved={approvedCount < segments.length}
         />
       </div>
 
@@ -295,7 +235,7 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
         <div className="flex-1 overflow-hidden p-4 lg:p-6 lg:pl-0">
           <SegmentList
             segments={segments}
-            approvals={editorState.approvals}
+            edits={editorState.edits}
             speakerColorMap={speakerColorMap}
             activeSegmentIndex={activeSegmentIndex}
             seekEvent={seekEvent}
@@ -303,8 +243,6 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
             isPlaying={isPlaying}
             isEditRequested={isEditRequested}
             editingSegmentIndex={editingSegmentIndex}
-            onApprove={handleApprove}
-            onUnapprove={handleUnapprove}
             onEdit={handleEdit}
             onSegmentClick={(segment) => handleSegmentClick(segment, audioRef)}
             onEditRequestHandled={() => setIsEditRequested(false)}
@@ -321,7 +259,7 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
         isOpen={showOfficialMinutesDialog}
         onClose={() => setShowOfficialMinutesDialog(false)}
         segments={segments}
-        approvals={editorState.approvals}
+        edits={editorState.edits}
         speakerLabels={speakerLabels}
         getSpeakerDisplayName={getSpeakerDisplayName}
         fileName={transcription.fileName}
@@ -333,7 +271,7 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
         isOpen={showPressReleaseDialog}
         onClose={() => setShowPressReleaseDialog(false)}
         segments={segments}
-        approvals={editorState.approvals}
+        edits={editorState.edits}
         getSpeakerDisplayName={getSpeakerDisplayName}
         fileName={transcription.fileName}
         transcriptionId={transcription.id}

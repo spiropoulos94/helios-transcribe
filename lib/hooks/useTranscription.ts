@@ -111,11 +111,9 @@ export function useTranscription(): UseTranscriptionReturn {
             // Update each transcription with the audio file reference
             for (const transcription of savedTranscriptions) {
               await updateTranscriptionEditorState(transcription.id, {
-                approvals: transcription.metadata?.structuredData?.segments.map((_, index) => ({
+                edits: transcription.metadata?.structuredData?.segments.map((_, index) => ({
                   segmentIndex: index,
-                  approved: false,
                 })) || [],
-                isDraft: true,
                 audioFileId,
                 audioFileName: config.file!.name,
                 audioDuration: transcription.metadata?.audioDurationSeconds,

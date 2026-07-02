@@ -10,11 +10,10 @@ const DB_VERSION = 1;
 const STORE_NAME = 'transcriptions';
 
 /**
- * Segment approval status for editor workflow
+ * A single segment's edit record
  */
-export interface SegmentApproval {
+export interface SegmentEdit {
   segmentIndex: number;
-  approved: boolean;
   editedText?: string;
   editedAt?: number;
 }
@@ -29,12 +28,11 @@ export interface SpeakerLabel {
 }
 
 /**
- * Transcription editor state for segment approval workflow
+ * Transcription editor state
  */
 export interface TranscriptionEditorState {
-  approvals: SegmentApproval[];
-  isDraft: boolean;
-  finalizedAt?: number;
+  edits: SegmentEdit[];
+  lastEditedAt?: number;
   audioFileId?: string;
   audioFileName?: string;
   audioDuration?: number;

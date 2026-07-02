@@ -340,6 +340,8 @@
     "of": "of",
     "basicInfo": "Basic Info",
     "attendees": "Attendees",
+    "sessionInfo": "Session Info",
+    "lastEdited": "Edited",
     "generatePreview": "Generate",
     "municipality": "Municipality",
     "sessionNumber": "Session Number",

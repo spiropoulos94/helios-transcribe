@@ -8,7 +8,7 @@ import {
   StructuredTranscription,
 } from '../../types';
 import { buildTranscriptionPrompt } from '../../prompts';
-import { aiConfig } from '../../../config';
+import { aiConfig, pipelineConfig } from '../../../config';
 
 export interface GoogleProviderConfig {
   apiKey?: string;
@@ -48,7 +48,7 @@ export class GoogleGeminiProvider implements AITranscriptionProvider {
   constructor(config?: GoogleProviderConfig) {
     this.config = {
       apiKey: config?.apiKey || aiConfig.GEMINI_API_KEY || '',
-      model: config?.model || process.env.GEMINI_MODEL || 'gemini-3-pro-preview',
+      model: config?.model || pipelineConfig.geminiModel,
       pollingIntervalMs: config?.pollingIntervalMs || 2000,
       requestTimeoutMs: config?.requestTimeoutMs || 300000, // 5 minutes default
       enableStructuredOutput: config?.enableStructuredOutput ?? true, // Default: enabled

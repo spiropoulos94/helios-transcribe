@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { OfficialMinutesFormState, Absentee } from '@/lib/export/types';
+import { OfficialMinutesFormState } from '@/lib/export/types';
 import { ExportTranslations } from '../types';
 
 interface OfficialMinutesAttendeesProps {
@@ -12,12 +12,12 @@ interface OfficialMinutesAttendeesProps {
 
 export default function OfficialMinutesAttendees({ formState, updateField, t }: OfficialMinutesAttendeesProps) {
   const addAbsentee = () => {
-    updateField('absentees', [...formState.absentees, { name: '', justified: true }]);
+    updateField('absentees', [...formState.absentees, '']);
   };
 
-  const updateAbsentee = (index: number, field: keyof Absentee, value: string | boolean) => {
+  const updateAbsentee = (index: number, value: string) => {
     const newAbsentees = [...formState.absentees];
-    newAbsentees[index] = { ...newAbsentees[index], [field]: value };
+    newAbsentees[index] = value;
     updateField('absentees', newAbsentees);
   };
 
@@ -161,19 +161,11 @@ export default function OfficialMinutesAttendees({ formState, updateField, t }: 
               <div key={index} className="flex items-center gap-2">
                 <input
                   type="text"
-                  value={absentee.name}
-                  onChange={(e) => updateAbsentee(index, 'name', e.target.value)}
+                  value={absentee}
+                  onChange={(e) => updateAbsentee(index, e.target.value)}
                   placeholder="Ονοματεπώνυμο"
                   className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
-                <select
-                  value={absentee.justified ? 'justified' : 'unjustified'}
-                  onChange={(e) => updateAbsentee(index, 'justified', e.target.value === 'justified')}
-                  className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
-                  <option value="justified">{t.editor?.justified || 'Justified'}</option>
-                  <option value="unjustified">{t.editor?.unjustified || 'Unjustified'}</option>
-                </select>
                 <button
                   onClick={() => removeAbsentee(index)}
                   className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"

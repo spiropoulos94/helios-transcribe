@@ -188,7 +188,7 @@ export default function PressReleaseGenerate({
       {!canGenerate && (
         <WarningAlert
           title={t.editor?.requiredFieldsMissing || 'Required Fields Missing'}
-          message={t.editor?.requiredFieldsPressReleaseDesc || 'Please fill in Organization and Title/Subject in the previous step.'}
+          message={t.editor?.requiredFieldsPressReleaseDesc || 'Please fill in Organization and Title/Subject.'}
         />
       )}
 

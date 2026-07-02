@@ -3,7 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { PressReleaseRequest, PressReleaseResponse } from '@/lib/export/pressReleaseTypes';
 import { buildPressReleasePrompt } from '@/lib/export/pressReleasePrompt';
 import { formatTranscriptionForMinutes } from '@/lib/export/formatTranscriptionForMinutes';
-import { aiConfig } from '@/lib/config';
+import { aiConfig, pipelineConfig } from '@/lib/config';
 import { requireAuth } from '@/lib/auth-utils';
 
 export async function POST(request: NextRequest): Promise<NextResponse<PressReleaseResponse>> {
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<PressRele
 
     // Generate press release using Gemini
     const response = await client.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: pipelineConfig.geminiModel,
       contents: [
         {
           role: 'user',

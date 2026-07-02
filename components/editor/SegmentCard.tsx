@@ -3,7 +3,7 @@
 import { useState, useEffect, memo } from 'react';
 import { Edit2, Volume2 } from 'lucide-react';
 import { TranscriptionSegment } from '@/lib/ai/types';
-import { SegmentApproval } from '@/lib/transcriptionStorage';
+import { SegmentEdit } from '@/lib/transcriptionStorage';
 import { ColorScheme } from '@/lib/editor/speakerColors';
 import { useTranslations } from '@/contexts/TranslationsContext';
 import SegmentHeader from './SegmentHeader';
@@ -17,15 +17,13 @@ interface SearchMatchHighlight {
 interface SegmentCardProps {
   segment: TranscriptionSegment;
   index: number;
-  approval: SegmentApproval;
+  edit: SegmentEdit;
   isActive: boolean;
   isPlaying: boolean;
   isEditRequested: boolean;
   editingSegmentIndex: number | null;
   speakerColor: ColorScheme;
   searchMatch?: SearchMatchHighlight | null;
-  onApprove?: (index: number) => void;
-  onUnapprove?: (index: number) => void;
   onEdit?: (index: number, newText: string) => void;
   onSegmentClick: (segment: TranscriptionSegment) => void;
   onEditRequestHandled: () => void;
@@ -35,30 +33,28 @@ interface SegmentCardProps {
 }
 
 function SegmentCard({
-  segment, index, approval, isActive, isPlaying, isEditRequested, editingSegmentIndex,
-  speakerColor, searchMatch, onApprove, onUnapprove, onEdit, onSegmentClick, onEditRequestHandled,
+  segment, index, edit, isActive, isPlaying, isEditRequested, editingSegmentIndex,
+  speakerColor, searchMatch, onEdit, onSegmentClick, onEditRequestHandled,
   onEditingChange, getSpeakerDisplayName, onLabelSpeaker,
 }: SegmentCardProps) {
   const { t } = useTranslations();
   const [isEditing, setIsEditing] = useState(false);
-  const [editedText, setEditedText] = useState(approval.editedText || segment.text);
+  const [editedText, setEditedText] = useState(edit.editedText || segment.text);
 
-  // Handle edit request from keyboard shortcut
   useEffect(() => {
-    if (isEditRequested && isActive && !approval.approved && !isEditing) {
+    if (isEditRequested && isActive && !isEditing) {
       setIsEditing(true);
       onEditingChange(index);
       onEditRequestHandled();
     }
-  }, [isEditRequested, isActive, approval.approved, isEditing, onEditRequestHandled, onEditingChange, index]);
+  }, [isEditRequested, isActive, isEditing, onEditRequestHandled, onEditingChange, index]);
 
-  // Close edit mode when another segment starts being edited
   useEffect(() => {
     if (isEditing && editingSegmentIndex !== null && editingSegmentIndex !== index) {
-      setEditedText(approval.editedText || segment.text);
+      setEditedText(edit.editedText || segment.text);
       setIsEditing(false);
     }
-  }, [editingSegmentIndex, index, isEditing, approval.editedText, segment.text]);
+  }, [editingSegmentIndex, index, isEditing, edit.editedText, segment.text]);
 
   const handleSaveEdit = () => {
     onEdit?.(index, editedText);
@@ -67,13 +63,9 @@ function SegmentCard({
   };
 
   const handleCancelEdit = () => {
-    setEditedText(approval.editedText || segment.text);
+    setEditedText(edit.editedText || segment.text);
     setIsEditing(false);
     onEditingChange(null);
-  };
-
-  const handleApproveToggle = () => {
-    approval.approved ? onUnapprove?.(index) : onApprove?.(index);
   };
 
   const isNowPlaying = isActive && isPlaying;
@@ -82,8 +74,6 @@ function SegmentCard({
     const base = 'rounded-xl border-2 p-3 sm:p-4 animate-in fade-in slide-in-from-bottom-4 cursor-pointer';
     const transition = 'transition-all duration-300';
     if (isEditing) return `${base} ${transition} bg-yellow-50 border-yellow-400 shadow-md`;
-    if (approval.approved) return `${base} ${transition} bg-emerald-50 border-emerald-200 shadow-sm`;
-    // Active segment: blue styling (playing or not)
     if (isActive) {
       if (isPlaying) {
         return `${base} bg-blue-50 border-blue-400 shadow-lg`;
@@ -93,10 +83,9 @@ function SegmentCard({
     return `${base} ${transition} bg-white border-slate-200 hover:border-slate-300 hover:shadow-md`;
   };
 
-  const displayText = approval.editedText || segment.text;
-  const hasBeenEdited = approval.editedText !== undefined && approval.editedText !== segment.text;
+  const displayText = edit.editedText || segment.text;
+  const hasBeenEdited = edit.editedText !== undefined && edit.editedText !== segment.text;
 
-  // Render text with optional search match highlighting
   const renderHighlightedText = () => {
     if (!searchMatch) {
       return displayText;
@@ -117,11 +106,8 @@ function SegmentCard({
   };
 
   const handleCardClick = () => {
-    // If this segment is being edited, don't trigger click (user is interacting with form)
     if (isEditing) return;
 
-    // If another segment is being edited, close it first by setting editing to this segment
-    // (the other segment will auto-close via the editingSegmentIndex effect)
     if (editingSegmentIndex !== null && editingSegmentIndex !== index) {
       onEditingChange(null);
     }
@@ -131,7 +117,6 @@ function SegmentCard({
 
   return (
     <div className={`${getCardClasses()} relative`} onClick={handleCardClick}>
-      {/* Now Playing indicator */}
       {isNowPlaying && (
         <div className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-md">
           <Volume2 className="w-3.5 h-3.5 animate-pulse" />
@@ -140,11 +125,9 @@ function SegmentCard({
       )}
       <SegmentHeader
         segment={segment}
-        approval={approval}
         speakerColor={speakerColor}
         hasBeenEdited={hasBeenEdited}
         isEditing={isEditing}
-        onApproveToggle={handleApproveToggle}
         onTimestampClick={() => onSegmentClick(segment)}
         getSpeakerDisplayName={getSpeakerDisplayName}
         onLabelSpeaker={onLabelSpeaker}
@@ -160,19 +143,17 @@ function SegmentCard({
       ) : (
         <div className="space-y-2 sm:space-y-3">
           <p className="text-sm sm:text-base text-slate-700 leading-relaxed whitespace-pre-wrap">{renderHighlightedText()}</p>
-          {!approval.approved && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsEditing(true);
-                onEditingChange(index);
-              }}
-              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            >
-              <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              {t.editor?.edit || t.common?.edit || 'Edit'}
-            </button>
-          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+              onEditingChange(index);
+            }}
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+          >
+            <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            {t.editor?.edit || t.common?.edit || 'Edit'}
+          </button>
         </div>
       )}
     </div>

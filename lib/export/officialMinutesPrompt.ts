@@ -159,8 +159,7 @@ function formatMetadataSection(metadata: OfficialMinutesMetadata): string {
     parts.push('');
     parts.push('ΑΠΟΝΤΕΣ:');
     metadata.absentees.forEach(absentee => {
-      const justification = absentee.justified ? 'δικαιολογημένη απουσία' : 'αδικαιολόγητη απουσία';
-      parts.push(`- ${absentee.name} (${justification})`);
+      parts.push(`- ${absentee}`);
     });
   }
 

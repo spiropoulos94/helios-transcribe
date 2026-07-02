@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { TranscriptionSegment } from '@/lib/ai/types';
-import { SegmentApproval } from '@/lib/transcriptionStorage';
+import { SegmentEdit } from '@/lib/transcriptionStorage';
 
 export interface SearchMatch {
   segmentIndex: number;
@@ -41,12 +41,12 @@ interface UseSegmentSearchReturn {
  * - Wraps around when reaching end/beginning
  *
  * @param segments - Array of transcription segments
- * @param approvals - Array of segment approvals (for edited text)
+ * @param edits - Array of segment edits (for edited text overrides)
  * @returns Search state and navigation functions
  */
 export function useSegmentSearch(
   segments: TranscriptionSegment[],
-  approvals: SegmentApproval[]
+  edits: SegmentEdit[]
 ): UseSegmentSearchReturn {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -62,7 +62,8 @@ export function useSegmentSearch(
 
     segments.forEach((segment, index) => {
       // Get the text to search (prefer edited text if available)
-      const text = (approvals[index]?.editedText || segment.text).toLowerCase();
+      const edit = edits.find((e) => e.segmentIndex === index);
+      const text = (edit?.editedText || segment.text).toLowerCase();
 
       // Find all occurrences in this segment
       let position = 0;
@@ -80,7 +81,7 @@ export function useSegmentSearch(
     });
 
     return results;
-  }, [segments, approvals, searchQuery]);
+  }, [segments, edits, searchQuery]);
 
   // Current match with unique ID for navigation
   const [matchEventId, setMatchEventId] = useState(0);

@@ -24,19 +24,7 @@ function formatGreekDate(isoDate: string): string {
   return `${day} ${month} ${year}`;
 }
 
-/**
- * Get tone description in Greek
- */
-function getToneDescription(tone: 'formal' | 'neutral' | 'friendly'): string {
-  switch (tone) {
-    case 'formal':
-      return 'επίσημο και επαγγελματικό';
-    case 'neutral':
-      return 'ουδέτερο και ενημερωτικό';
-    case 'friendly':
-      return 'φιλικό και προσιτό';
-  }
-}
+const TONE_DESCRIPTION = 'επίσημο και επαγγελματικό';
 
 /**
  * Builds the complete prompt for Gemini to generate a press release
@@ -46,7 +34,6 @@ export function buildPressReleasePrompt(
   transcriptionText: string
 ): string {
   const formattedDate = formatGreekDate(metadata.date);
-  const toneDescription = getToneDescription(metadata.tone);
 
   let prompt = `Είσαι ειδικός στη σύνταξη δελτίων τύπου στα Ελληνικά. Σου παρέχεται η μεταγραφή μιας συνεδρίασης/συνέντευξης/ομιλίας και πρέπει να δημιουργήσεις ένα επαγγελματικό δελτίο τύπου.
 
@@ -57,12 +44,8 @@ export function buildPressReleasePrompt(
 **Ημερομηνία:** ${formattedDate || '[Δεν προσδιορίστηκε]'}
 **Τοποθεσία:** ${metadata.location || '[Δεν προσδιορίστηκε]'}
 
-**Ύφος:** ${toneDescription}
+**Ύφος:** ${TONE_DESCRIPTION}
 `;
-
-  if (metadata.targetAudience) {
-    prompt += `**Κοινό-στόχος:** ${metadata.targetAudience}\n`;
-  }
 
   if (metadata.keyPoints) {
     prompt += `**Βασικά σημεία προς έμφαση:** ${metadata.keyPoints}\n`;
@@ -91,7 +74,7 @@ export function buildPressReleasePrompt(
 
 2. **Στυλ Γραφής:**
    - Χρήση τρίτου προσώπου
-   - Ύφος: ${toneDescription}
+   - Ύφος: ${TONE_DESCRIPTION}
    - Σαφής και περιεκτική γλώσσα
    - Αποφυγή τεχνικής ορολογίας εκτός αν είναι απαραίτητη
    - Τονισμός της σημασίας και του αντίκτυπου

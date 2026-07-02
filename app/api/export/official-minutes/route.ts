@@ -3,7 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { OfficialMinutesRequest, OfficialMinutesResponse } from '@/lib/export/types';
 import { buildOfficialMinutesPrompt } from '@/lib/export/officialMinutesPrompt';
 import { formatTranscriptionForMinutes } from '@/lib/export/formatTranscriptionForMinutes';
-import { aiConfig } from '@/lib/config';
+import { aiConfig, pipelineConfig } from '@/lib/config';
 import { requireAuth } from '@/lib/auth-utils';
 
 export async function POST(request: NextRequest): Promise<NextResponse<OfficialMinutesResponse>> {
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<OfficialM
 
     // Generate official minutes using Gemini
     const response = await client.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: pipelineConfig.geminiModel,
       contents: [
         {
           role: 'user',

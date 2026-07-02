@@ -188,7 +188,7 @@ export default function OfficialMinutesGenerate({
       {!canGenerate && (
         <WarningAlert
           title={t.editor?.requiredFieldsMissing || 'Required Fields Missing'}
-          message={t.editor?.requiredFieldsMinutesDesc || 'Please fill in Municipality, Date, Council President, and Secretary in the previous steps.'}
+          message={t.editor?.requiredFieldsMinutesDesc || 'Please fill in Municipality, Date, Council President, and Secretary.'}
         />
       )}
 

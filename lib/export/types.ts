@@ -3,7 +3,8 @@
  */
 
 import { TranscriptionSegment } from '@/lib/ai/types';
-import { SegmentApproval, SpeakerLabel } from '@/lib/transcriptionStorage';
+import { SegmentEdit, SpeakerLabel } from '@/lib/transcriptionStorage';
+import { loadUserDefaults, suggestNextSessionNumber } from './userDefaults';
 
 /**
  * Metadata required to generate official municipal council minutes
@@ -24,16 +25,8 @@ export interface OfficialMinutesMetadata {
 
   // Attendance
   councilors: string[]; // Present council members
-  absentees: Absentee[];
+  absentees: string[]; // Absent members (free-form names)
   invitees?: string[]; // Optional invited guests
-}
-
-/**
- * An absent member with justification status
- */
-export interface Absentee {
-  name: string;
-  justified: boolean;
 }
 
 /**
@@ -69,10 +62,10 @@ export interface OfficialMinutesResponse {
  * Form state for the OfficialMinutesDialog
  */
 export interface OfficialMinutesFormState {
-  // Step tracking
-  currentStep: 1 | 2 | 3;
+  // Step tracking (1 = fill form, 2 = generate/preview)
+  currentStep: 1 | 2;
 
-  // Basic info (Step 1)
+  // Session info
   municipality: string;
   sessionNumber: string;
   date: string;
@@ -80,15 +73,15 @@ export interface OfficialMinutesFormState {
   endTime: string;
   location: string;
 
-  // Attendees (Step 2)
+  // Attendees
   mayor: string;
   president: string;
   secretary: string;
   councilors: string[];
-  absentees: Absentee[];
+  absentees: string[];
   invitees: string[];
 
-  // Generation state (Step 3)
+  // Generation state
   isGenerating: boolean;
   generatedMarkdown: string | null;
   error: string | null;
@@ -202,28 +195,34 @@ export function clearFormStateFromStorage(transcriptionId?: string): void {
 }
 
 /**
- * Initial form state factory
+ * Initial form state factory.
+ *
+ * Smart defaults: pulls municipality, location, officials, and a suggested next
+ * session number from the user's prior exports (see `userDefaults.ts`).
+ * Councilors auto-populate from speaker labels.
  */
 export function createInitialFormState(speakerLabels: SpeakerLabel[] = []): OfficialMinutesFormState {
-  // Auto-populate councilors from speaker labels
   const councilors = speakerLabels
     .filter(label => label.customName && label.customName.trim() !== '')
     .map(label => label.customName);
 
+  const defaults = loadUserDefaults();
+  const today = new Date().toISOString().split('T')[0];
+
   return {
     currentStep: 1,
-    municipality: '',
-    sessionNumber: '',
-    date: new Date().toISOString().split('T')[0], // Today's date
+    municipality: defaults.municipality ?? '',
+    sessionNumber: suggestNextSessionNumber(defaults.lastSessionNumber, today),
+    date: today,
     startTime: '',
     endTime: '',
-    location: '',
-    mayor: '',
-    president: '',
-    secretary: '',
+    location: defaults.location ?? '',
+    mayor: defaults.mayor ?? '',
+    president: defaults.president ?? '',
+    secretary: defaults.secretary ?? '',
     councilors,
-    absentees: [],
-    invitees: [],
+    absentees: [] as string[],
+    invitees: [] as string[],
     isGenerating: false,
     generatedMarkdown: null,
     error: null,
@@ -245,7 +244,7 @@ export function extractMetadataFromFormState(formState: OfficialMinutesFormState
     president: formState.president,
     secretary: formState.secretary,
     councilors: formState.councilors.filter(c => c.trim() !== ''),
-    absentees: formState.absentees.filter(a => a.name.trim() !== ''),
+    absentees: formState.absentees.filter(a => a.trim() !== ''),
     invitees: formState.invitees.filter(i => i.trim() !== ''),
   };
 }
@@ -255,15 +254,15 @@ export function extractMetadataFromFormState(formState: OfficialMinutesFormState
  */
 export function resolveSegmentsForExport(
   segments: TranscriptionSegment[],
-  approvals: SegmentApproval[],
+  edits: SegmentEdit[],
   getSpeakerDisplayName: (id: string) => string
 ): ResolvedSegment[] {
   return segments.map((segment, index) => {
-    const approval = approvals.find(a => a.segmentIndex === index);
+    const edit = edits.find(e => e.segmentIndex === index);
     return {
       speaker: segment.speaker,
       speakerDisplayName: getSpeakerDisplayName(segment.speaker),
-      text: approval?.editedText || segment.text,
+      text: edit?.editedText || segment.text,
       startTime: segment.startTime,
       endTime: segment.endTime,
     };

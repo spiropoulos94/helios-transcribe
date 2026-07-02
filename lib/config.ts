@@ -22,7 +22,7 @@ export const pipelineConfig = {
   targetLanguage: process.env.TARGET_LANGUAGE || 'Greek (Ελληνικά)',
 
   /** Gemini model to use */
-  geminiModel: process.env.GEMINI_MODEL || 'gemini-3-pro-preview',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
 
   /** ElevenLabs model to use */
   elevenLabsModel: (process.env.ELEVENLABS_MODEL as 'scribe_v1' | 'scribe_v2') || 'scribe_v2',

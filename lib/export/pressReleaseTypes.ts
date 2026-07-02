@@ -3,6 +3,7 @@
  */
 
 import { ResolvedSegment } from './types';
+import { loadUserDefaults } from './userDefaults';
 
 /**
  * Metadata for generating a press release
@@ -19,10 +20,8 @@ export interface PressReleaseMetadata {
   contactEmail: string;
   contactPhone: string;
 
-  // Additional context
-  targetAudience: string;
-  keyPoints: string; // Free text for key messages to emphasize
-  tone: 'formal' | 'neutral' | 'friendly';
+  // What to emphasize in the output
+  keyPoints: string;
 }
 
 /**
@@ -55,9 +54,7 @@ export interface PressReleaseFormState {
   title: string;
   date: string;
   location: string;
-  targetAudience: string;
   keyPoints: string;
-  tone: 'formal' | 'neutral' | 'friendly';
 
   // Contact info (optional, Step 1)
   contactName: string;
@@ -181,18 +178,17 @@ export function clearPressReleaseFormStateFromStorage(transcriptionId?: string):
  * Initial form state factory
  */
 export function createInitialPressReleaseFormState(): PressReleaseFormState {
+  const defaults = loadUserDefaults();
   return {
     currentStep: 1,
-    organization: '',
+    organization: defaults.organization ?? '',
     title: '',
     date: new Date().toISOString().split('T')[0],
-    location: '',
-    targetAudience: '',
+    location: defaults.pressReleaseLocation ?? '',
     keyPoints: '',
-    tone: 'formal',
-    contactName: '',
-    contactEmail: '',
-    contactPhone: '',
+    contactName: defaults.contactName ?? '',
+    contactEmail: defaults.contactEmail ?? '',
+    contactPhone: defaults.contactPhone ?? '',
     isGenerating: false,
     generatedMarkdown: null,
     error: null,
@@ -211,8 +207,6 @@ export function extractPressReleaseMetadataFromFormState(formState: PressRelease
     contactName: formState.contactName,
     contactEmail: formState.contactEmail,
     contactPhone: formState.contactPhone,
-    targetAudience: formState.targetAudience,
     keyPoints: formState.keyPoints,
-    tone: formState.tone,
   };
 }

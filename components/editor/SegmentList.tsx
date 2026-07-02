@@ -3,7 +3,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { TranscriptionSegment } from '@/lib/ai/types';
-import { SegmentApproval } from '@/lib/transcriptionStorage';
+import { SegmentEdit } from '@/lib/transcriptionStorage';
 import { ColorScheme } from '@/lib/editor/speakerColors';
 import { SearchMatchEvent } from '@/lib/hooks/useSegmentSearch';
 import SegmentCard from './SegmentCard';
@@ -15,7 +15,7 @@ interface SeekEvent {
 
 interface SegmentListProps {
   segments: TranscriptionSegment[];
-  approvals: SegmentApproval[];
+  edits: SegmentEdit[];
   speakerColorMap: Record<string, ColorScheme>;
   activeSegmentIndex: number | null;
   seekEvent: SeekEvent | null;
@@ -23,8 +23,6 @@ interface SegmentListProps {
   isPlaying: boolean;
   isEditRequested: boolean;
   editingSegmentIndex: number | null;
-  onApprove: (index: number) => void;
-  onUnapprove: (index: number) => void;
   onEdit: (index: number, newText: string) => void;
   onSegmentClick: (segment: TranscriptionSegment) => void;
   onEditRequestHandled: () => void;
@@ -36,7 +34,7 @@ interface SegmentListProps {
 
 export default function SegmentList({
   segments,
-  approvals,
+  edits,
   speakerColorMap,
   activeSegmentIndex,
   seekEvent,
@@ -44,8 +42,6 @@ export default function SegmentList({
   isPlaying,
   isEditRequested,
   editingSegmentIndex,
-  onApprove,
-  onUnapprove,
   onEdit,
   onSegmentClick,
   onEditRequestHandled,
@@ -63,7 +59,6 @@ export default function SegmentList({
     overscan: 5,
   });
 
-  // Scroll to segment with retry logic for large jumps (virtualizer needs time to measure distant segments)
   const scrollToSegment = useCallback((index: number) => {
     let attempts = 0;
     const maxAttempts = 15;
@@ -88,7 +83,6 @@ export default function SegmentList({
     attemptScroll();
   }, [virtualizer]);
 
-  // Scroll on explicit user actions (seek, click, keyboard navigation)
   useEffect(() => {
     if (seekEvent !== null) {
       scrollToSegment(seekEvent.segmentIndex);
@@ -96,14 +90,12 @@ export default function SegmentList({
     }
   }, [seekEvent?.id, scrollToSegment, onSeekEventHandled]);
 
-  // Auto-scroll during playback (disabled when editing a segment)
   useEffect(() => {
     if (activeSegmentIndex !== null && editingSegmentIndex === null) {
       scrollToSegment(activeSegmentIndex);
     }
   }, [activeSegmentIndex, scrollToSegment, editingSegmentIndex]);
 
-  // Scroll to search match
   useEffect(() => {
     if (currentSearchMatch !== null) {
       scrollToSegment(currentSearchMatch.segmentIndex);
@@ -127,9 +119,8 @@ export default function SegmentList({
         {virtualItems.map((virtualRow) => {
           const index = virtualRow.index;
           const segment = segments[index];
-          const approval = approvals[index] || {
+          const edit = edits.find((e) => e.segmentIndex === index) || {
             segmentIndex: index,
-            approved: false,
           };
 
           return (
@@ -149,15 +140,13 @@ export default function SegmentList({
                 <SegmentCard
                   segment={segment}
                   index={index}
-                  approval={approval}
+                  edit={edit}
                   isActive={activeSegmentIndex === index}
                   isPlaying={isPlaying}
                   isEditRequested={isEditRequested && activeSegmentIndex === index}
                   editingSegmentIndex={editingSegmentIndex}
                   speakerColor={speakerColorMap[segment.speaker]}
                   searchMatch={currentSearchMatch?.segmentIndex === index ? currentSearchMatch : null}
-                  onApprove={onApprove}
-                  onUnapprove={onUnapprove}
                   onEdit={onEdit}
                   onSegmentClick={onSegmentClick}
                   onEditRequestHandled={onEditRequestHandled}
