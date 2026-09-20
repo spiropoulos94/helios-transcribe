@@ -2,6 +2,8 @@
 
 import { useRef, useCallback, useMemo, useState } from 'react';
 import { SavedTranscription } from '@/lib/transcriptionStorage';
+import { resolveSegmentsForExport } from '@/lib/export/types';
+import { toSRT, toVTT, downloadSubtitles } from '@/lib/export/subtitleFormats';
 import { SPEAKER_COLORS, ColorScheme } from '@/lib/editor/speakerColors';
 import { useEditorKeyboardShortcuts } from '@/lib/hooks/useEditorKeyboardShortcuts';
 import { useEditorState } from '@/lib/hooks/useEditorState';
@@ -125,6 +127,18 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     URL.revokeObjectURL(url);
   }, [segments, editorState.edits, transcription.fileName, getSpeakerDisplayName]);
 
+  const handleExportSrt = useCallback(() => {
+    const resolved = resolveSegmentsForExport(segments, editorState.edits, getSpeakerDisplayName);
+    const content = toSRT(resolved);
+    downloadSubtitles(content, transcription.fileName.replace(/\.[^/.]+$/, ''), 'srt');
+  }, [segments, editorState.edits, transcription.fileName, getSpeakerDisplayName]);
+
+  const handleExportVtt = useCallback(() => {
+    const resolved = resolveSegmentsForExport(segments, editorState.edits, getSpeakerDisplayName);
+    const content = toVTT(resolved);
+    downloadSubtitles(content, transcription.fileName.replace(/\.[^/.]+$/, ''), 'vtt');
+  }, [segments, editorState.edits, transcription.fileName, getSpeakerDisplayName]);
+
   const handleExportOfficialMinutes = useCallback(() => {
     setShowOfficialMinutesDialog(true);
   }, []);
@@ -195,6 +209,8 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
           labeledCount={labeledCount}
           totalSpeakers={uniqueSpeakers.length}
           onExportPlainText={handleExportPlainText}
+          onExportSrt={handleExportSrt}
+          onExportVtt={handleExportVtt}
           onExportOfficialMinutes={handleExportOfficialMinutes}
           onExportPressRelease={handleExportPressRelease}
         />

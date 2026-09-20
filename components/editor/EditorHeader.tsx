@@ -17,6 +17,8 @@ interface EditorHeaderProps {
   labeledCount: number;
   totalSpeakers: number;
   onExportPlainText: () => void;
+  onExportSrt: () => void;
+  onExportVtt: () => void;
   onExportOfficialMinutes: () => void;
   onExportPressRelease: () => void;
 }
@@ -36,7 +38,7 @@ function formatRelativeTime(timestamp: number | undefined, t: ReturnType<typeof 
 
 export default function EditorHeader({
   transcription, editorState, labeledCount, totalSpeakers,
-  onExportPlainText, onExportOfficialMinutes, onExportPressRelease,
+  onExportPlainText, onExportSrt, onExportVtt, onExportOfficialMinutes, onExportPressRelease,
 }: EditorHeaderProps) {
   const { t, lang } = useTranslations();
   const router = useRouter();
@@ -95,6 +97,8 @@ export default function EditorHeader({
 
             <ExportMenu
               onExportPlainText={onExportPlainText}
+              onExportSrt={onExportSrt}
+              onExportVtt={onExportVtt}
               onExportOfficialMinutes={onExportOfficialMinutes}
               onExportPressRelease={onExportPressRelease}
             />
