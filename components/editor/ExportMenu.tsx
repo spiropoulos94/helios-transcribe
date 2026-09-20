@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Download, FileText, ScrollText, Newspaper, ChevronDown } from 'lucide-react';
+import { Download, FileText, ScrollText, Newspaper, Captions, ChevronDown } from 'lucide-react';
 import { useTranslations } from '@/contexts/TranslationsContext';
 
 interface ExportMenuProps {
   onExportPlainText: () => void;
+  onExportSrt: () => void;
+  onExportVtt: () => void;
   onExportOfficialMinutes: () => void;
   onExportPressRelease: () => void;
   disabled?: boolean;
@@ -13,6 +15,8 @@ interface ExportMenuProps {
 
 export default function ExportMenu({
   onExportPlainText,
+  onExportSrt,
+  onExportVtt,
   onExportOfficialMinutes,
   onExportPressRelease,
   disabled = false,
@@ -51,6 +55,16 @@ export default function ExportMenu({
 
   const handleExportPlainText = () => {
     onExportPlainText();
+    setIsOpen(false);
+  };
+
+  const handleExportSrt = () => {
+    onExportSrt();
+    setIsOpen(false);
+  };
+
+  const handleExportVtt = () => {
+    onExportVtt();
     setIsOpen(false);
   };
 
@@ -97,6 +111,42 @@ export default function ExportMenu({
                 </div>
                 <div className="text-xs text-slate-500">
                   {t.editor?.exportPlainTextDesc || 'Simple text with timestamps'}
+                </div>
+              </div>
+            </button>
+
+            {/* SRT Subtitle Export */}
+            <button
+              onClick={handleExportSrt}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-blue-50 transition-colors"
+            >
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <Captions className="w-4 h-4 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <div className="font-medium text-slate-900">
+                  {t.editor?.exportSrt || 'Subtitles (.srt)'}
+                </div>
+                <div className="text-xs text-slate-500">
+                  {t.editor?.exportSrtDesc || 'For YouTube & video editors'}
+                </div>
+              </div>
+            </button>
+
+            {/* VTT Subtitle Export */}
+            <button
+              onClick={handleExportVtt}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-blue-50 transition-colors"
+            >
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <Captions className="w-4 h-4 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <div className="font-medium text-slate-900">
+                  {t.editor?.exportVtt || 'Web Subtitles (.vtt)'}
+                </div>
+                <div className="text-xs text-slate-500">
+                  {t.editor?.exportVttDesc || 'For web players'}
                 </div>
               </div>
             </button>
