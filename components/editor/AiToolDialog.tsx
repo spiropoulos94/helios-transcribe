@@ -129,22 +129,19 @@ export default function AiToolDialog({
     setError(null);
     try {
       const stored = localStorage.getItem(getStorageKey(transcriptionId, type));
-      setMarkdown(stored ?? null);
+      setMarkdown(stored && stored.length > 0 ? stored : null);
     } catch {
       setMarkdown(null);
     }
   }, [isOpen, transcriptionId, type]);
 
-  // Persist markdown whenever it changes
+  // Persist generated markdown. Never auto-delete: removing on a null value
+  // would clobber the saved content on reopen (StrictMode runs effects twice,
+  // so the load pass reads back the just-deleted value).
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !markdown) return;
     try {
-      const key = getStorageKey(transcriptionId, type);
-      if (markdown) {
-        localStorage.setItem(key, markdown);
-      } else {
-        localStorage.removeItem(key);
-      }
+      localStorage.setItem(getStorageKey(transcriptionId, type), markdown);
     } catch {
       // Ignore storage errors (private mode, quota, etc.)
     }
