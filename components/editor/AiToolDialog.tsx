@@ -20,6 +20,7 @@ import {
   isTranscriptionTooLong,
 } from '@/lib/export/formatTranscriptionForMinutes';
 import { AiToolType, AiGenerateResponse } from '@/lib/ai/journalistPrompts';
+import { getGeneratedContent, saveGeneratedContent } from '@/lib/generatedContent';
 import { TranscriptionSegment } from '@/lib/ai/types';
 import { SegmentEdit } from '@/lib/transcriptionStorage';
 import {
@@ -123,16 +124,40 @@ export default function AiToolDialog({
   const summary = useMemo(() => getTranscriptionSummary(resolvedSegments), [resolvedSegments]);
   const isTooLong = useMemo(() => isTranscriptionTooLong(resolvedSegments), [resolvedSegments]);
 
-  // Load persisted markdown when the dialog opens (or the tool type changes)
+  // Load persisted markdown when the dialog opens (or the tool type changes).
+  // Prefer the server copy (available from any device); fall back to the
+  // localStorage offline cache. Both paths are fail-soft.
   useEffect(() => {
     if (!isOpen) return;
     setError(null);
+
+    let cancelled = false;
+
+    // Show the cached value immediately so the dialog is never empty offline.
+    let cached: string | null = null;
     try {
       const stored = localStorage.getItem(getStorageKey(transcriptionId, type));
-      setMarkdown(stored && stored.length > 0 ? stored : null);
+      cached = stored && stored.length > 0 ? stored : null;
     } catch {
-      setMarkdown(null);
+      cached = null;
     }
+    setMarkdown(cached);
+
+    // Then override with the server copy when one exists.
+    getGeneratedContent(transcriptionId, type)
+      .then((item) => {
+        if (cancelled) return;
+        if (item && item.content.length > 0) {
+          setMarkdown(item.content);
+        }
+      })
+      .catch(() => {
+        // Keep the cached value on any error.
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, transcriptionId, type]);
 
   // Persist generated markdown. Never auto-delete: removing on a null value
@@ -152,8 +177,12 @@ export default function AiToolDialog({
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    // Persist manual edits server-side on close (fire-and-forget, fail-soft).
+    if (markdown && markdown.length > 0) {
+      void saveGeneratedContent({ transcriptionId, type, content: markdown });
+    }
     onClose();
-  }, [onClose]);
+  }, [onClose, markdown, transcriptionId, type]);
 
   // Close on escape key
   useEffect(() => {
@@ -201,6 +230,8 @@ export default function AiToolDialog({
 
       setMarkdown(result.markdown ?? '');
       setIsGenerating(false);
+      // Persist server-side so it is retrievable from any device (fail-soft).
+      void saveGeneratedContent({ transcriptionId, type, content: result.markdown ?? '' });
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         return;
@@ -210,7 +241,15 @@ export default function AiToolDialog({
     } finally {
       abortControllerRef.current = null;
     }
-  }, [segments, edits, getSpeakerDisplayName, type, lang]);
+  }, [segments, edits, getSpeakerDisplayName, type, lang, transcriptionId]);
+
+  const handleCancel = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsGenerating(false);
+  }, []);
 
   const handleRegenerate = useCallback(() => {
     setMarkdown(null);
@@ -266,11 +305,22 @@ export default function AiToolDialog({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {isGenerating ? (
-            <GeneratingSpinner
-              title={t.editor?.aiGenerating || 'Generating...'}
-              subtitle={t.editor?.generatingDesc || 'This may take a moment'}
-              colorScheme="emerald"
-            />
+            <div className="space-y-4">
+              <GeneratingSpinner
+                title={t.editor?.aiGenerating || 'Generating...'}
+                subtitle={t.editor?.generatingDesc || 'This may take a moment'}
+                colorScheme="emerald"
+              />
+              <div className="flex justify-center">
+                <button
+                  onClick={handleCancel}
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  {t.editor?.cancel || 'Άκυρο'}
+                </button>
+              </div>
+            </div>
           ) : error ? (
             <div className="space-y-4">
               <ErrorAlert
