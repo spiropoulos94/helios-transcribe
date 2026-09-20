@@ -18,7 +18,7 @@ Focus on municipalities and government entities first before opening up to indiv
 ### 3. Self-Funded R&D
 - High revenue from 1-2 municipalities covers:
   - Server infrastructure costs
-  - Gemini API bills
+  - Transcription API bills
   - Developer salaries
 - Government essentially pays for product refinement before public release
 
@@ -64,7 +64,7 @@ Focus on municipalities and government entities first before opening up to indiv
 - Professional associations
 
 **Value Proposition**:
-- Advanced Gemini capabilities (diarization, speaker identification)
+- Advanced transcription capabilities (diarization, speaker identification)
 - Legal argument summarization
 - Academic meeting documentation
 
