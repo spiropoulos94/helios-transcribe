@@ -9,6 +9,7 @@ import { useTranslations } from '@/contexts/TranslationsContext';
 import { localePath } from '@/i18n/config';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 import ExportMenu from './ExportMenu';
+import AiToolsMenu from './AiToolsMenu';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 interface EditorHeaderProps {
@@ -23,6 +24,10 @@ interface EditorHeaderProps {
   onExportPressRelease: () => void;
   onExportQuotes: () => void;
   highlightCount: number;
+  onAiSummary: () => void;
+  onAiArticle: () => void;
+  onAiShowNotes: () => void;
+  onAiClips: () => void;
 }
 
 function formatRelativeTime(timestamp: number | undefined, t: ReturnType<typeof useTranslations>['t']): string | null {
@@ -42,6 +47,7 @@ export default function EditorHeader({
   transcription, editorState, labeledCount, totalSpeakers,
   onExportPlainText, onExportSrt, onExportVtt, onExportOfficialMinutes, onExportPressRelease,
   onExportQuotes, highlightCount,
+  onAiSummary, onAiArticle, onAiShowNotes, onAiClips,
 }: EditorHeaderProps) {
   const { t, lang } = useTranslations();
   const router = useRouter();
@@ -97,6 +103,13 @@ export default function EditorHeader({
               </button>
               <KeyboardShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
             </div>
+
+            <AiToolsMenu
+              onSummary={onAiSummary}
+              onArticle={onAiArticle}
+              onShowNotes={onAiShowNotes}
+              onClips={onAiClips}
+            />
 
             <button
               onClick={onExportQuotes}
