@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, memo } from 'react';
-import { Edit2, Volume2 } from 'lucide-react';
+import { Edit2, Volume2, Star } from 'lucide-react';
 import { TranscriptionSegment } from '@/lib/ai/types';
 import { SegmentEdit } from '@/lib/transcriptionStorage';
 import { ColorScheme } from '@/lib/editor/speakerColors';
@@ -24,6 +24,8 @@ interface SegmentCardProps {
   editingSegmentIndex: number | null;
   speakerColor: ColorScheme;
   searchMatch?: SearchMatchHighlight | null;
+  isHighlighted?: boolean;
+  onToggleHighlight?: () => void;
   onEdit?: (index: number, newText: string) => void;
   onSegmentClick: (segment: TranscriptionSegment) => void;
   onEditRequestHandled: () => void;
@@ -34,8 +36,8 @@ interface SegmentCardProps {
 
 function SegmentCard({
   segment, index, edit, isActive, isPlaying, isEditRequested, editingSegmentIndex,
-  speakerColor, searchMatch, onEdit, onSegmentClick, onEditRequestHandled,
-  onEditingChange, getSpeakerDisplayName, onLabelSpeaker,
+  speakerColor, searchMatch, isHighlighted, onToggleHighlight, onEdit, onSegmentClick,
+  onEditRequestHandled, onEditingChange, getSpeakerDisplayName, onLabelSpeaker,
 }: SegmentCardProps) {
   const { t } = useTranslations();
   const [isEditing, setIsEditing] = useState(false);
@@ -73,12 +75,16 @@ function SegmentCard({
   const getCardClasses = () => {
     const base = 'rounded-xl border-2 p-3 sm:p-4 animate-in fade-in slide-in-from-bottom-4 cursor-pointer';
     const transition = 'transition-all duration-300';
-    if (isEditing) return `${base} ${transition} bg-yellow-50 border-yellow-400 shadow-md`;
+    const accent = isHighlighted ? ' border-l-4 border-l-amber-400' : '';
+    if (isEditing) return `${base} ${transition} bg-yellow-50 border-yellow-400 shadow-md${accent}`;
     if (isActive) {
       if (isPlaying) {
-        return `${base} bg-blue-50 border-blue-400 shadow-lg`;
+        return `${base} bg-blue-50 border-blue-400 shadow-lg${accent}`;
       }
-      return `${base} ${transition} bg-blue-50 border-blue-300 shadow-md`;
+      return `${base} ${transition} bg-blue-50 border-blue-300 shadow-md${accent}`;
+    }
+    if (isHighlighted) {
+      return `${base} ${transition} bg-amber-50 border-amber-200 border-l-4 border-l-amber-400 hover:shadow-md`;
     }
     return `${base} ${transition} bg-white border-slate-200 hover:border-slate-300 hover:shadow-md`;
   };
@@ -117,6 +123,27 @@ function SegmentCard({
 
   return (
     <div className={`${getCardClasses()} relative`} onClick={handleCardClick}>
+      {onToggleHighlight && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleHighlight();
+          }}
+          className={`absolute top-2 right-2 z-10 p-1.5 rounded-lg transition-colors ${
+            isHighlighted
+              ? 'text-amber-500 hover:bg-amber-100'
+              : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50'
+          }`}
+          title={
+            isHighlighted
+              ? t.editor?.unhighlight || 'Remove highlight'
+              : t.editor?.highlight || 'Highlight'
+          }
+          aria-pressed={isHighlighted}
+        >
+          <Star className={`w-4 h-4 ${isHighlighted ? 'fill-amber-400' : ''}`} />
+        </button>
+      )}
       {isNowPlaying && (
         <div className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-md">
           <Volume2 className="w-3.5 h-3.5 animate-pulse" />
