@@ -10,7 +10,9 @@ import { localePath } from '@/i18n/config';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 import ExportMenu from './ExportMenu';
 import AiToolsMenu from './AiToolsMenu';
+import GeneratedContentPanel from './GeneratedContentPanel';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { AiToolType } from '@/lib/ai/journalistPrompts';
 
 interface EditorHeaderProps {
   transcription: SavedTranscription;
@@ -28,6 +30,7 @@ interface EditorHeaderProps {
   onAiArticle: () => void;
   onAiShowNotes: () => void;
   onAiClips: () => void;
+  onOpenGenerated: (type: AiToolType) => void;
 }
 
 function formatRelativeTime(timestamp: number | undefined, t: ReturnType<typeof useTranslations>['t']): string | null {
@@ -48,6 +51,7 @@ export default function EditorHeader({
   onExportPlainText, onExportSrt, onExportVtt, onExportOfficialMinutes, onExportPressRelease,
   onExportQuotes, highlightCount,
   onAiSummary, onAiArticle, onAiShowNotes, onAiClips,
+  onOpenGenerated,
 }: EditorHeaderProps) {
   const { t, lang } = useTranslations();
   const router = useRouter();
@@ -109,6 +113,11 @@ export default function EditorHeader({
               onArticle={onAiArticle}
               onShowNotes={onAiShowNotes}
               onClips={onAiClips}
+            />
+
+            <GeneratedContentPanel
+              transcriptionId={transcription.id}
+              onOpen={onOpenGenerated}
             />
 
             <button

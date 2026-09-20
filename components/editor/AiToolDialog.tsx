@@ -20,6 +20,7 @@ import {
   isTranscriptionTooLong,
 } from '@/lib/export/formatTranscriptionForMinutes';
 import { AiToolType, AiGenerateResponse } from '@/lib/ai/journalistPrompts';
+import { getGeneratedContent, saveGeneratedContent } from '@/lib/generatedContent';
 import { TranscriptionSegment } from '@/lib/ai/types';
 import { SegmentEdit } from '@/lib/transcriptionStorage';
 import {
@@ -123,16 +124,40 @@ export default function AiToolDialog({
   const summary = useMemo(() => getTranscriptionSummary(resolvedSegments), [resolvedSegments]);
   const isTooLong = useMemo(() => isTranscriptionTooLong(resolvedSegments), [resolvedSegments]);
 
-  // Load persisted markdown when the dialog opens (or the tool type changes)
+  // Load persisted markdown when the dialog opens (or the tool type changes).
+  // Prefer the server copy (available from any device); fall back to the
+  // localStorage offline cache. Both paths are fail-soft.
   useEffect(() => {
     if (!isOpen) return;
     setError(null);
+
+    let cancelled = false;
+
+    // Show the cached value immediately so the dialog is never empty offline.
+    let cached: string | null = null;
     try {
       const stored = localStorage.getItem(getStorageKey(transcriptionId, type));
-      setMarkdown(stored && stored.length > 0 ? stored : null);
+      cached = stored && stored.length > 0 ? stored : null;
     } catch {
-      setMarkdown(null);
+      cached = null;
     }
+    setMarkdown(cached);
+
+    // Then override with the server copy when one exists.
+    getGeneratedContent(transcriptionId, type)
+      .then((item) => {
+        if (cancelled) return;
+        if (item && item.content.length > 0) {
+          setMarkdown(item.content);
+        }
+      })
+      .catch(() => {
+        // Keep the cached value on any error.
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, transcriptionId, type]);
 
   // Persist generated markdown. Never auto-delete: removing on a null value
@@ -152,8 +177,12 @@ export default function AiToolDialog({
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    // Persist manual edits server-side on close (fire-and-forget, fail-soft).
+    if (markdown && markdown.length > 0) {
+      void saveGeneratedContent({ transcriptionId, type, content: markdown });
+    }
     onClose();
-  }, [onClose]);
+  }, [onClose, markdown, transcriptionId, type]);
 
   // Close on escape key
   useEffect(() => {
@@ -201,6 +230,8 @@ export default function AiToolDialog({
 
       setMarkdown(result.markdown ?? '');
       setIsGenerating(false);
+      // Persist server-side so it is retrievable from any device (fail-soft).
+      void saveGeneratedContent({ transcriptionId, type, content: result.markdown ?? '' });
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         return;
@@ -210,7 +241,7 @@ export default function AiToolDialog({
     } finally {
       abortControllerRef.current = null;
     }
-  }, [segments, edits, getSpeakerDisplayName, type, lang]);
+  }, [segments, edits, getSpeakerDisplayName, type, lang, transcriptionId]);
 
   const handleRegenerate = useCallback(() => {
     setMarkdown(null);

@@ -250,6 +250,7 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
           onAiArticle={handleAiArticle}
           onAiShowNotes={handleAiShowNotes}
           onAiClips={handleAiClips}
+          onOpenGenerated={setActiveAiTool}
         />
       </div>
 
