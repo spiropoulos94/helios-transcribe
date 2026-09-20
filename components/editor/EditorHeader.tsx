@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { ArrowLeft, Trash2, Keyboard } from 'lucide-react';
+import { ArrowLeft, Trash2, Keyboard, Star } from 'lucide-react';
 import { SavedTranscription, deleteTranscription, TranscriptionEditorState } from '@/lib/transcriptionStorage';
 import { useTranslations } from '@/contexts/TranslationsContext';
 import { localePath } from '@/i18n/config';
@@ -21,6 +21,8 @@ interface EditorHeaderProps {
   onExportVtt: () => void;
   onExportOfficialMinutes: () => void;
   onExportPressRelease: () => void;
+  onExportQuotes: () => void;
+  highlightCount: number;
 }
 
 function formatRelativeTime(timestamp: number | undefined, t: ReturnType<typeof useTranslations>['t']): string | null {
@@ -39,6 +41,7 @@ function formatRelativeTime(timestamp: number | undefined, t: ReturnType<typeof 
 export default function EditorHeader({
   transcription, editorState, labeledCount, totalSpeakers,
   onExportPlainText, onExportSrt, onExportVtt, onExportOfficialMinutes, onExportPressRelease,
+  onExportQuotes, highlightCount,
 }: EditorHeaderProps) {
   const { t, lang } = useTranslations();
   const router = useRouter();
@@ -94,6 +97,17 @@ export default function EditorHeader({
               </button>
               <KeyboardShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
             </div>
+
+            <button
+              onClick={onExportQuotes}
+              disabled={highlightCount === 0}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-amber-700 bg-amber-50 hover:bg-amber-100 enabled:hover:text-amber-800"
+              title={highlightCount === 0 ? (t.editor?.exportQuotesEmpty || 'Highlight segments first') : (t.editor?.exportQuotes || 'Export quotes')}
+            >
+              <Star className={`w-4 h-4 ${highlightCount > 0 ? 'fill-amber-400' : ''}`} />
+              <span className="hidden sm:inline">{t.editor?.exportQuotes || 'Export quotes'}</span>
+              {highlightCount > 0 && <span>({highlightCount})</span>}
+            </button>
 
             <ExportMenu
               onExportPlainText={onExportPlainText}

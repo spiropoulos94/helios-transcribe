@@ -7,6 +7,8 @@ import { toSRT, toVTT, downloadSubtitles } from '@/lib/export/subtitleFormats';
 import { SPEAKER_COLORS, ColorScheme } from '@/lib/editor/speakerColors';
 import { useEditorKeyboardShortcuts } from '@/lib/hooks/useEditorKeyboardShortcuts';
 import { useEditorState } from '@/lib/hooks/useEditorState';
+import { useHighlights } from '@/lib/hooks/useHighlights';
+import { buildQuotesExport } from '@/lib/editor/highlights';
 import { useAudioSync } from '@/lib/hooks/useAudioSync';
 import { useSegmentSearch } from '@/lib/hooks/useSegmentSearch';
 import { useSpeakerSample } from '@/lib/hooks/useSpeakerSample';
@@ -52,6 +54,8 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     uniqueSpeakers,
     labeledCount,
   } = useEditorState(transcription, segments);
+
+  const { highlighted, toggle: toggleHighlight } = useHighlights(transcription.id);
 
   const speakerSample = useSpeakerSample({
     segments,
@@ -139,6 +143,25 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     downloadSubtitles(content, transcription.fileName.replace(/\.[^/.]+$/, ''), 'vtt');
   }, [segments, editorState.edits, transcription.fileName, getSpeakerDisplayName]);
 
+  const handleExportQuotes = useCallback(() => {
+    const exportText = buildQuotesExport(
+      segments,
+      editorState.edits,
+      getSpeakerDisplayName,
+      [...highlighted]
+    );
+
+    const blob = new Blob([exportText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${transcription.fileName.replace(/\.[^/.]+$/, '')}_quotes.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [segments, editorState.edits, getSpeakerDisplayName, highlighted, transcription.fileName]);
+
   const handleExportOfficialMinutes = useCallback(() => {
     setShowOfficialMinutesDialog(true);
   }, []);
@@ -213,6 +236,8 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
           onExportVtt={handleExportVtt}
           onExportOfficialMinutes={handleExportOfficialMinutes}
           onExportPressRelease={handleExportPressRelease}
+          onExportQuotes={handleExportQuotes}
+          highlightCount={highlighted.size}
         />
       </div>
 
@@ -259,6 +284,8 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
             isPlaying={isPlaying}
             isEditRequested={isEditRequested}
             editingSegmentIndex={editingSegmentIndex}
+            highlightedIndices={highlighted}
+            onToggleHighlight={toggleHighlight}
             onEdit={handleEdit}
             onSegmentClick={(segment) => handleSegmentClick(segment, audioRef)}
             onEditRequestHandled={() => setIsEditRequested(false)}

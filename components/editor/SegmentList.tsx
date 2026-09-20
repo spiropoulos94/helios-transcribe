@@ -23,6 +23,8 @@ interface SegmentListProps {
   isPlaying: boolean;
   isEditRequested: boolean;
   editingSegmentIndex: number | null;
+  highlightedIndices: Set<number>;
+  onToggleHighlight: (index: number) => void;
   onEdit: (index: number, newText: string) => void;
   onSegmentClick: (segment: TranscriptionSegment) => void;
   onEditRequestHandled: () => void;
@@ -42,6 +44,8 @@ export default function SegmentList({
   isPlaying,
   isEditRequested,
   editingSegmentIndex,
+  highlightedIndices,
+  onToggleHighlight,
   onEdit,
   onSegmentClick,
   onEditRequestHandled,
@@ -147,6 +151,8 @@ export default function SegmentList({
                   editingSegmentIndex={editingSegmentIndex}
                   speakerColor={speakerColorMap[segment.speaker]}
                   searchMatch={currentSearchMatch?.segmentIndex === index ? currentSearchMatch : null}
+                  isHighlighted={highlightedIndices.has(index)}
+                  onToggleHighlight={() => onToggleHighlight(index)}
                   onEdit={onEdit}
                   onSegmentClick={onSegmentClick}
                   onEditRequestHandled={onEditRequestHandled}
