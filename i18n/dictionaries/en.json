@@ -1,87 +1,87 @@
 {
   "landing": {
     "hero": {
-      "title1": "Greek meetings.",
-      "title2": "Transcribed perfectly.",
-      "subtitle": "Professional transcription for institutions that demand accuracy, reliability, and clarity.",
-      "cta": "Request Access"
+      "title1": "Greek voice.",
+      "title2": "In text, instantly.",
+      "subtitle": "Turn interviews, podcasts and recordings into clean text — with correct names and accents. Built for journalists, podcasters and creators.",
+      "cta": "Try it free"
     },
     "whoUsesSection": {
-      "badge": "Built For Institutions",
-      "title": "Who uses Grecho",
+      "badge": "For people who work with voice",
+      "title": "Who saves time with Grecho",
       "cards": [
         {
-          "title": "Municipalities & Local Authorities",
-          "description": "Council meetings, public sessions, and official proceedings requiring accurate documentation."
+          "title": "Journalists",
+          "description": "Transcribe interviews in minutes and find the right quote with its timestamp."
         },
         {
-          "title": "Universities & Research",
-          "description": "Academic discussions, research meetings, and institutional decisions that need clear records."
+          "title": "Podcasters",
+          "description": "Show notes, chapters and subtitles for every episode — without the manual work."
         },
         {
-          "title": "Public Organizations",
-          "description": "Committee meetings, board sessions, and formal discussions requiring official transcripts."
+          "title": "Students & Researchers",
+          "description": "Notes from lectures, interviews and fieldwork, all organized into text."
         },
         {
-          "title": "Professional Teams",
-          "description": "Legal, academic, and professional environments where precision and accountability matter."
+          "title": "Content Creators",
+          "description": "From long-form video to quotes and clips for reels and social — automatically."
         }
       ]
     },
     "featuresSection": {
-      "title1": "Powerful features for",
-      "title2": "professional transcription",
+      "title1": "Powerful tools for",
+      "title2": "interviews & podcasts",
       "features": [
         {
           "title": "High-accuracy Greek transcription",
-          "description": "Optimized specifically for formal Greek speech patterns, multiple speakers, and extended meeting durations. Built to understand the nuances of professional discourse."
+          "description": "Understands names, accents and difficult terminology — no matter how long the conversation runs."
         },
         {
           "title": "Speaker identification & timestamps",
-          "description": "Automatically identify and label different speakers. Navigate through hours of discussion with precise timestamps and clear attribution."
+          "description": "Automatically separate speakers and add timestamps so you can find the exact quote you need."
         },
         {
-          "title": "Searchable meeting archives",
-          "description": "Find any decision, statement, or topic instantly across your entire meeting history. Transform audio archives into searchable knowledge bases."
+          "title": "Searchable archives",
+          "description": "Find any word or phrase in seconds across your entire history."
         },
         {
-          "title": "Export official records",
-          "description": "Download transcripts in formats ready for archiving, compliance reporting, and official documentation. Seamlessly integrate with your existing workflows."
+          "title": "Ready-to-use exports",
+          "description": "Download as txt, docx, pdf or subtitles — ready for publishing, archiving or YouTube."
         }
       ]
     },
     "officialUseSection": {
-      "title": "Built for environments where accuracy matters",
-      "subtitle1": "Grecho isn't a generic transcription tool.",
-      "subtitle2": "It's engineered for official use.",
+      "title": "Built for your work",
+      "subtitle1": "Grecho isn't a generic dictation tool.",
+      "subtitle2": "It's your assistant for every interview and episode.",
       "points": [
-        "Suitable for council meetings and formal sessions",
-        "Supports long-form discussions and structured debates",
-        "Designed with institutional workflows in mind"
+        "Perfect for interviews and reporting",
+        "Handles difficult dialogue and complex terminology",
+        "Designed for daily creator workflows"
       ]
     },
     "securitySection": {
-      "title": "Secure & reliable",
+      "title": "Your data stays yours",
       "cards": [
         {
-          "title": "Secure processing",
-          "description": "Your audio files are processed with enterprise-grade security"
+          "title": "Source protection",
+          "description": "Your files are processed securely and never used to train models."
         },
         {
           "title": "Clear practices",
-          "description": "Transparent data handling and compliance-ready workflows"
+          "description": "Transparent data handling and respect for your privacy."
         },
         {
           "title": "Reliable performance",
-          "description": "Consistent results for scheduled and repeated use"
+          "description": "Count on Grecho for every recording, whenever you need it."
         }
       ],
-      "note": "Additional compliance and deployment options available upon request"
+      "note": "Need special security settings? We're here to help."
     },
     "ctaSection": {
-      "title": "Ready for a pilot?",
-      "subtitle": "Grecho is available through direct onboarding and pilot programs for institutions and professional teams.",
-      "cta": "Request Access"
+      "title": "Ready to start?",
+      "subtitle": "Try Grecho free and see how much time you save on every interview.",
+      "cta": "Try it free"
     },
     "contactForm": {
       "title": "Request Access",
@@ -103,10 +103,10 @@
     },
     "aboutSection": {
       "title": "Made in Greece, for Greek",
-      "description": "Grecho is developed in Greece with deep understanding of the Greek language and the specific needs of public and professional organizations."
+      "description": "Grecho is developed in Greece with deep understanding of the Greek language — for everyone who works with the Greek voice."
     },
     "footer": {
-      "copyright": "© 2025 Grecho — Professional Greek transcription"
+      "copyright": "© 2026 Grecho — Greek voice, in text."
     }
   },
   "transcribe": {
