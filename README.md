@@ -2,6 +2,8 @@
 
 AI-powered Greek transcription app built with Next.js 16, TypeScript, and Google Gemini 2.5 Flash. Upload audio/video files and get accurate Greek transcriptions with speaker identification.
 
+> 📖 **Documentation**: All docs live in [docs/](docs/README.md) — with Greek translations in [docs/el/](docs/el/). 🇬🇷 Ελληνικό README: [docs/el/README.md](docs/el/README.md)
+
 ## Features
 
 - 🎙️ **Audio & Video Transcription** - Support for MP3, WAV, MP4, and MOV files
