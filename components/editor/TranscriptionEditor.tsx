@@ -19,6 +19,8 @@ import SegmentList from './SegmentList';
 import SearchBar from './SearchBar';
 import OfficialMinutesDialog from './OfficialMinutesDialog';
 import PressReleaseDialog from './PressReleaseDialog';
+import AiToolDialog from './AiToolDialog';
+import { AiToolType } from '@/lib/ai/journalistPrompts';
 
 interface TranscriptionEditorProps {
   transcription: SavedTranscription;
@@ -39,6 +41,7 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
   const audioRef = useRef<HTMLAudioElement>(null);
   const [showOfficialMinutesDialog, setShowOfficialMinutesDialog] = useState(false);
   const [showPressReleaseDialog, setShowPressReleaseDialog] = useState(false);
+  const [activeAiTool, setActiveAiTool] = useState<AiToolType | null>(null);
 
   const segments = useMemo(() => {
     const rawSegments = transcription.metadata?.structuredData?.segments || [];
@@ -170,6 +173,11 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     setShowPressReleaseDialog(true);
   }, []);
 
+  const handleAiSummary = useCallback(() => setActiveAiTool('summary'), []);
+  const handleAiArticle = useCallback(() => setActiveAiTool('article'), []);
+  const handleAiShowNotes = useCallback(() => setActiveAiTool('show-notes'), []);
+  const handleAiClips = useCallback(() => setActiveAiTool('clips'), []);
+
   const handleKeyboardEdit = useCallback(() => {
     if (activeSegmentIndex !== null) {
       setIsEditRequested(true);
@@ -238,6 +246,10 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
           onExportPressRelease={handleExportPressRelease}
           onExportQuotes={handleExportQuotes}
           highlightCount={highlighted.size}
+          onAiSummary={handleAiSummary}
+          onAiArticle={handleAiArticle}
+          onAiShowNotes={handleAiShowNotes}
+          onAiClips={handleAiClips}
         />
       </div>
 
@@ -319,6 +331,20 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
         fileName={transcription.fileName}
         transcriptionId={transcription.id}
       />
+
+      {/* AI Content Toolkit Dialog */}
+      {activeAiTool && (
+        <AiToolDialog
+          isOpen={activeAiTool !== null}
+          onClose={() => setActiveAiTool(null)}
+          type={activeAiTool}
+          segments={segments}
+          edits={editorState.edits}
+          getSpeakerDisplayName={getSpeakerDisplayName}
+          fileName={transcription.fileName}
+          transcriptionId={transcription.id}
+        />
+      )}
     </div>
   );
 }
