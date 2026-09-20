@@ -243,6 +243,14 @@ export default function AiToolDialog({
     }
   }, [segments, edits, getSpeakerDisplayName, type, lang, transcriptionId]);
 
+  const handleCancel = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsGenerating(false);
+  }, []);
+
   const handleRegenerate = useCallback(() => {
     setMarkdown(null);
     setError(null);
@@ -297,11 +305,22 @@ export default function AiToolDialog({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {isGenerating ? (
-            <GeneratingSpinner
-              title={t.editor?.aiGenerating || 'Generating...'}
-              subtitle={t.editor?.generatingDesc || 'This may take a moment'}
-              colorScheme="emerald"
-            />
+            <div className="space-y-4">
+              <GeneratingSpinner
+                title={t.editor?.aiGenerating || 'Generating...'}
+                subtitle={t.editor?.generatingDesc || 'This may take a moment'}
+                colorScheme="emerald"
+              />
+              <div className="flex justify-center">
+                <button
+                  onClick={handleCancel}
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  {t.editor?.cancel || 'Άκυρο'}
+                </button>
+              </div>
+            </div>
           ) : error ? (
             <div className="space-y-4">
               <ErrorAlert
