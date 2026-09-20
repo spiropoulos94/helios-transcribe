@@ -4,6 +4,7 @@
  */
 
 import { StructuredTranscription } from './ai/types';
+import { syncTranscription, type TranscriptionSyncPayload } from './serverTranscriptions';
 
 const DB_NAME = 'grecho-transcription-storage';
 const DB_VERSION = 1;
@@ -124,6 +125,34 @@ function openDB(): Promise<IDBDatabase> {
  */
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+}
+
+/**
+ * Map a locally saved transcription to the server sync payload.
+ */
+function toSyncPayload(t: SavedTranscription): TranscriptionSyncPayload {
+  const durationSeconds = t.metadata?.audioDurationSeconds;
+  return {
+    id: t.id,
+    fileName: t.fileName,
+    text: t.text,
+    provider: t.provider ?? null,
+    model: t.metadata?.model ?? null,
+    wordCount: t.metadata?.wordCount ?? null,
+    durationSeconds: durationSeconds != null ? Math.round(durationSeconds) : null,
+    processingTimeMs: t.metadata?.processingTimeMs ?? null,
+    rawJson: t.metadata?.rawJson ?? null,
+    editorState: t.metadata?.editorState ? JSON.stringify(t.metadata.editorState) : null,
+    createdAtMs: t.timestamp,
+  };
+}
+
+/**
+ * Best-effort backup of a transcription to the user's account.
+ * Fire-and-forget: never blocks or breaks the local-first save flow.
+ */
+function backupToAccount(t: SavedTranscription): void {
+  void syncTranscription(toSyncPayload(t));
 }
 
 /**
@@ -255,6 +284,7 @@ export async function saveTranscription(
 
     request.onsuccess = () => {
       console.log('[TranscriptionStorage] Saved transcription:', transcription.id);
+      backupToAccount(transcription);
       resolve(transcription);
     };
     request.onerror = () => reject(request.error);
@@ -366,6 +396,7 @@ export async function saveMultiModelTranscriptions(
     transaction.oncomplete = () => {
       console.log(`[TranscriptionStorage] Saved ${savedTranscriptions.length} transcriptions`);
       db.close();
+      savedTranscriptions.forEach(backupToAccount);
       resolve(savedTranscriptions);
     };
 
