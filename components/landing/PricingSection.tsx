@@ -18,7 +18,6 @@ export default function PricingSection({ lang }: PricingSectionProps) {
   const router = useRouter();
   const { status } = useSession();
   const [interval, setInterval] = useState<BillingInterval>('month');
-  const [seats, setSeats] = useState(3);
   const [busy, setBusy] = useState<PlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +31,6 @@ export default function PricingSection({ lang }: PricingSectionProps) {
   const monthlyLabel = l === 'el' ? 'Μηνιαία' : 'Monthly';
   const annualLabel = l === 'el' ? 'Ετήσια' : 'Annual';
   const saveLabel = l === 'el' ? 'Οικονομία' : 'Save';
-  const seatsLabel = l === 'el' ? 'θέσεις' : 'seats';
 
   const handleCta = async (plan: PlanId) => {
     setError(null);
@@ -54,7 +52,8 @@ export default function PricingSection({ lang }: PricingSectionProps) {
     }
 
     setBusy(plan);
-    const result = await startCheckout(plan, interval, plan === 'newsroom' ? seats : undefined);
+    // Seats are a coming-soon (team) concern; default Newsroom to 1 seat for now.
+    const result = await startCheckout(plan, interval);
     if (result.error) {
       setError(result.error);
       setBusy(null);
@@ -155,23 +154,6 @@ export default function PricingSection({ lang }: PricingSectionProps) {
                 <div className={`text-sm font-medium mb-6 ${plan.highlighted ? 'text-blue-600' : 'text-blue-300'}`}>
                   {plan.hoursLabel[l]}
                 </div>
-
-                {/* Newsroom: choose seat quantity for checkout */}
-                {plan.perSeat && (
-                  <label className="flex items-center justify-between gap-2 mb-6 text-sm">
-                    <span className={plan.highlighted ? 'text-slate-600' : 'text-slate-300'}>
-                      {seatsLabel}
-                    </span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={500}
-                      value={seats}
-                      onChange={(e) => setSeats(Math.max(1, Math.min(500, Number(e.target.value) || 1)))}
-                      className="w-20 px-2 py-1 rounded-md bg-white/10 border border-white/20 text-white text-right"
-                    />
-                  </label>
-                )}
 
                 <ul className="space-y-3 mb-8 flex-1">
                   {features.map((feature) => {
