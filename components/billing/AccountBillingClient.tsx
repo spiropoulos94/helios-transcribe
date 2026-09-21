@@ -52,15 +52,17 @@ export default function AccountBillingClient({ lang }: AccountBillingClientProps
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {plan !== 'free' && (
+            {plan === 'free' ? (
+              <Link
+                href={localePath('/pricing', lang)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              >
+                {tr('choosePlan', 'Choose a plan')}
+              </Link>
+            ) : (
+              // The portal now handles switching plans, payment, invoices and cancel.
               <ManageSubscriptionButton label={tr('manage', 'Manage subscription')} />
             )}
-            <Link
-              href={localePath('/pricing', lang)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-            >
-              {plan === 'free' ? tr('choosePlan', 'Choose a plan') : tr('upgrade', 'Change plan')}
-            </Link>
           </div>
         </div>
       </section>
