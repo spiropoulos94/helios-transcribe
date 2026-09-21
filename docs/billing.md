@@ -156,13 +156,23 @@ State is derived from Stripe and stored on `Subscription`. The **effective plan*
 - `status` past_due/unpaid → keep the paid plan through the grace period Stripe allows;
   `canceled`/absent → Free.
 
+**Where plan changes happen:** new subscribers go through Stripe **Checkout**; existing
+subscribers manage everything in the Stripe **Customer Portal** (the checkout route
+redirects them there, and the account page's only action is *Manage subscription*). The
+portal is configured from code (`lib/billing/portalConfig.ts`): switch plan, update card,
+invoices, billing details, cancel. This keeps one Stripe-tested path and avoids ever
+opening a second (double-billing) subscription.
+
 | Transition | Money | Access | Mechanism |
 |-----------|-------|--------|-----------|
-| Upgrade (e.g. Pro→Creator) | immediate, prorated | new tier immediately | update subscription item, `proration_behavior=create_prorations` |
-| Downgrade (Creator→Pro) | at period end | keeps higher tier until period end | Stripe **subscription schedule** phase change at period end; entitlements recompute on webhook |
-| Cancel | none | keeps plan until period end, then Free | `cancel_at_period_end=true`; `deleted` webhook → Free |
-| Newsroom seat + | prorated | immediately | update item `quantity` |
-| Newsroom seat − | at period end (or immediate w/ proration via portal) | must remove members down to seat count | update `quantity`; app enforces membership ≤ seats |
+| Upgrade (e.g. Pro→Creator) | immediate, prorated (delta) | new tier immediately | portal plan switch, `proration_behavior=create_prorations`; webhook syncs state |
+| Downgrade (Creator→Pro) | immediate, prorated **credit** | switches immediately | portal plan switch; webhook syncs state |
+| Cancel | none | keeps plan until period end, then Free | portal cancel (`mode=at_period_end`); `deleted` webhook → Free |
+| Newsroom seats | n/a yet | — | seat changes are off until the team feature ships (see §7) |
+
+> Note: the portal applies downgrades **immediately with a prorated credit** — Stripe's
+> portal does not schedule plan switches for period end. Only *cancellation* is deferred to
+> period end.
 
 ### Downgrade behavior matrix (over-limit handling)
 
