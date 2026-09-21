@@ -18,6 +18,9 @@
     "@prisma/client": "^5.22.0",
     "@stripe/stripe-js": "^5.10.0",
     "@tanstack/react-virtual": "^3.13.18",
+    "@tiptap/pm": "^2.27.3",
+    "@tiptap/react": "^2.27.3",
+    "@tiptap/starter-kit": "^2.27.3",
     "bcryptjs": "^3.0.3",
     "docx": "^9.5.1",
     "file-saver": "^2.0.5",
@@ -32,7 +35,8 @@
     "react-hot-toast": "^2.6.0",
     "resend": "^6.9.2",
     "rss-parser": "^3.13.0",
-    "stripe": "^18.5.0"
+    "stripe": "^18.5.0",
+    "tiptap-markdown": "^0.8.10"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",

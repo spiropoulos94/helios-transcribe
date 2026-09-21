@@ -9,7 +9,6 @@ import {
   Scissors,
   RefreshCw,
   Sparkles,
-  Pencil,
   type LucideIcon,
 } from 'lucide-react';
 import { downloadInFormat, DownloadFormat } from '@/lib/export/downloadFormats';
@@ -23,6 +22,7 @@ import { AiToolType, AiGenerateResponse } from '@/lib/ai/journalistPrompts';
 import { getGeneratedContent, saveGeneratedContent } from '@/lib/generatedContent';
 import { TranscriptionSegment } from '@/lib/ai/types';
 import { SegmentEdit } from '@/lib/transcriptionStorage';
+import RichMarkdownEditor from './RichMarkdownEditor';
 import {
   DownloadMenu,
   TranscriptionSummaryCard,
@@ -352,18 +352,7 @@ export default function AiToolDialog({
                   <DownloadMenu onDownload={handleDownload} t={t} colorScheme="emerald" />
                 </div>
               </div>
-              <div className="relative">
-                <textarea
-                  value={markdown}
-                  onChange={(e) => setMarkdown(e.target.value)}
-                  className="w-full h-[400px] p-4 text-sm text-slate-800 font-mono bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
-                  placeholder={t.editor?.aiEditHint || 'Edit the generated content here...'}
-                />
-                <div className="absolute bottom-3 right-3 flex items-center gap-1 text-xs text-slate-400">
-                  <Pencil className="w-3 h-3" />
-                  {t.editor?.aiEditHint || 'Editable'}
-                </div>
-              </div>
+              <RichMarkdownEditor value={markdown} onChange={setMarkdown} />
             </div>
           ) : (
             <div className="space-y-4">
