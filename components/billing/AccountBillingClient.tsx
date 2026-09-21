@@ -106,18 +106,41 @@ export default function AccountBillingClient({ lang }: AccountBillingClientProps
           <FeatureRow ok={entitlements.features.highlights} label={el ? 'Highlights & quotes' : 'Highlights & quotes'} />
           <FeatureRow ok={entitlements.features.rss} label={el ? 'RSS auto-import' : 'RSS auto-import'} />
           <FeatureRow ok={entitlements.features.priorityProcessing} label={el ? 'Προτεραιότητα' : 'Priority processing'} />
-          <FeatureRow ok={entitlements.features.team} label={el ? 'Ομαδικό workspace (σύντομα)' : 'Team workspace (soon)'} />
+          <FeatureRow ok={entitlements.features.team} label={el ? 'Ομαδικό workspace' : 'Team workspace'} soon={el ? 'Σύντομα' : 'Soon'} />
         </ul>
       </section>
     </div>
   );
 }
 
-function FeatureRow({ ok, label, value }: { ok: boolean; label: string; value?: string }) {
+function FeatureRow({
+  ok,
+  label,
+  value,
+  soon,
+}: {
+  ok: boolean;
+  label: string;
+  value?: string;
+  /** When set, renders a "coming soon" badge (text is the localized label). */
+  soon?: string;
+}) {
+  const available = ok && !soon;
   return (
     <li className="flex items-center gap-2">
-      <Check className={`w-4 h-4 shrink-0 ${ok ? 'text-emerald-400' : 'text-slate-600'}`} />
-      <span className={ok ? 'text-slate-200' : 'text-slate-500 line-through'}>{label}</span>
+      <Check className={`w-4 h-4 shrink-0 ${available ? 'text-emerald-400' : 'text-slate-600'}`} />
+      <span
+        className={
+          available ? 'text-slate-200' : soon ? 'text-slate-300' : 'text-slate-500 line-through'
+        }
+      >
+        {label}
+      </span>
+      {soon && (
+        <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300">
+          {soon}
+        </span>
+      )}
       {value && <span className="text-slate-400">— {value}</span>}
     </li>
   );
