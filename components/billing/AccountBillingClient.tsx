@@ -106,7 +106,7 @@ export default function AccountBillingClient({ lang }: AccountBillingClientProps
           <FeatureRow ok={entitlements.features.highlights} label={el ? 'Highlights & quotes' : 'Highlights & quotes'} />
           <FeatureRow ok={entitlements.features.rss} label={el ? 'RSS auto-import' : 'RSS auto-import'} />
           <FeatureRow ok={entitlements.features.priorityProcessing} label={el ? 'Προτεραιότητα' : 'Priority processing'} />
-          <FeatureRow ok={entitlements.features.team} label={el ? 'Ομαδικό workspace' : 'Team workspace'} />
+          <FeatureRow ok={entitlements.features.team} label={el ? 'Ομαδικό workspace (σύντομα)' : 'Team workspace (soon)'} />
         </ul>
       </section>
     </div>
