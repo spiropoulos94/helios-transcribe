@@ -123,7 +123,7 @@ model PodcastEpisode {
   title           String?
   audioUrl        String
   publishedAt     DateTime?
-  status          String    @default("pending") // pending | queued | done | failed
+  status          String    @default("pending") // pending | queued | skipped | done | failed
   transcriptionId String?
   createdAt       DateTime  @default(now())
 
