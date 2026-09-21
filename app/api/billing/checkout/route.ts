@@ -7,6 +7,7 @@ import {
   isBillingInterval,
 } from '@/lib/billing/priceMapping';
 import { getSubscription, setStripeCustomerId } from '@/lib/server/subscriptionRepo';
+import { planRank, resolveEffectivePlan } from '@/lib/billing/entitlements';
 import { appConfig } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +20,10 @@ interface CheckoutBody {
 
 /**
  * POST /api/billing/checkout
- * Create a Stripe Checkout Session for a chosen plan + interval (+ seats for Newsroom).
+ * New subscriber → a Stripe Checkout Session for the chosen plan + interval (+ seats).
+ * Existing subscriber → change the plan on the CURRENT subscription in place (never a
+ * second subscription): upgrades/interval/seat changes are immediate and prorated (you
+ * pay only the delta); downgrades are scheduled for the end of the current period.
  * Creates/reuses the Stripe customer and stores its id on the user's subscription.
  */
 export async function POST(request: NextRequest) {
@@ -74,6 +78,47 @@ export async function POST(request: NextRequest) {
       await setStripeCustomerId(userId, customerId);
     }
 
+    // Existing active subscriber → modify the current subscription in place so we never
+    // create a second (double-billing) subscription.
+    if (
+      existing?.stripeSubscriptionId &&
+      existing.plan !== 'free' &&
+      ['active', 'trialing', 'past_due'].includes(existing.status)
+    ) {
+      const sub = await stripe.subscriptions.retrieve(existing.stripeSubscriptionId);
+      const item = sub.items.data[0];
+      const isDowngrade = planRank(plan) < planRank(resolveEffectivePlan(existing));
+
+      if (isDowngrade) {
+        // Keep the higher tier until period end, then switch (Stripe subscription schedule).
+        const schedule = await stripe.subscriptionSchedules.create({
+          from_subscription: sub.id,
+        });
+        await stripe.subscriptionSchedules.update(schedule.id, {
+          end_behavior: 'release',
+          proration_behavior: 'none',
+          phases: [
+            {
+              items: [{ price: item.price.id, quantity: item.quantity ?? 1 }],
+              start_date: item.current_period_start,
+              end_date: item.current_period_end,
+            },
+            { items: [{ price: priceId, quantity: seats }] },
+          ],
+        });
+        return NextResponse.json({ url: `${appConfig.url}/account?checkout=scheduled` });
+      }
+
+      // Upgrade / interval / seat change → immediate, prorated (charged the delta only).
+      await stripe.subscriptions.update(sub.id, {
+        items: [{ id: item.id, price: priceId, quantity: seats }],
+        proration_behavior: 'create_prorations',
+        cancel_at_period_end: false,
+      });
+      return NextResponse.json({ url: `${appConfig.url}/account?checkout=updated` });
+    }
+
+    // New subscriber → Stripe Checkout.
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
