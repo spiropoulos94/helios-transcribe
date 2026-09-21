@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Library, Menu, X, LogIn, LogOut, FileAudio, Tag } from 'lucide-react';
+import { Library, Menu, X, LogIn, LogOut, FileAudio } from 'lucide-react';
 import Logo from './Logo';
 import { LanguageToggle } from './LanguageToggle';
 import { useTranslations } from '@/contexts/TranslationsContext';
@@ -60,7 +60,6 @@ export const Header: React.FC = () => {
             href={localePath('/pricing', lang)}
             className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
           >
-            <Tag className="w-5 h-5" />
             <span>{t.header?.pricing || 'Pricing'}</span>
           </Link>
 
@@ -104,7 +103,6 @@ export const Header: React.FC = () => {
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
             >
-              <Tag className="w-5 h-5" />
               <span>{t.header?.pricing || 'Pricing'}</span>
             </Link>
 
