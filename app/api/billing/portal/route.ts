@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 import { getStripe } from '@/lib/billing/stripe';
+import { getPortalConfigurationId } from '@/lib/billing/portalConfig';
 import { getSubscription } from '@/lib/server/subscriptionRepo';
 import { appConfig } from '@/lib/config';
 
@@ -29,9 +30,12 @@ export async function POST() {
 
   try {
     const stripe = getStripe();
+    const configuration = await getPortalConfigurationId();
     const session = await stripe.billingPortal.sessions.create({
       customer: subscription.stripeCustomerId,
       return_url: `${appConfig.url}/account`,
+      // Fall back to the account default config when ours can't be resolved.
+      ...(configuration ? { configuration } : {}),
     });
     return NextResponse.json({ url: session.url });
   } catch (error) {
