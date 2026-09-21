@@ -174,16 +174,32 @@ export default function PricingSection({ lang }: PricingSectionProps) {
                 )}
 
                 <ul className="space-y-3 mb-8 flex-1">
-                  {features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2 text-sm">
-                      <Check
-                        className={`w-4 h-4 mt-0.5 shrink-0 ${plan.highlighted ? 'text-blue-600' : 'text-emerald-400'}`}
-                      />
-                      <span className={plan.highlighted ? 'text-slate-700' : 'text-slate-300'}>
-                        {feature}
-                      </span>
-                    </li>
-                  ))}
+                  {features.map((feature) => {
+                    // A line ending in ":" is an "Everything in X, plus:" group header,
+                    // not a checkmarked feature.
+                    if (feature.endsWith(':')) {
+                      return (
+                        <li
+                          key={feature}
+                          className={`text-xs font-semibold uppercase tracking-wide pt-1 ${
+                            plan.highlighted ? 'text-slate-500' : 'text-slate-400'
+                          }`}
+                        >
+                          {feature}
+                        </li>
+                      );
+                    }
+                    return (
+                      <li key={feature} className="flex items-start gap-2 text-sm">
+                        <Check
+                          className={`w-4 h-4 mt-0.5 shrink-0 ${plan.highlighted ? 'text-blue-600' : 'text-emerald-400'}`}
+                        />
+                        <span className={plan.highlighted ? 'text-slate-700' : 'text-slate-300'}>
+                          {feature}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
 
                 <button
