@@ -4,8 +4,14 @@ import { i18n } from './i18n/config';
 import { auth } from './auth';
 
 // Public routes that don't require authentication
-const publicRoutes = ['/', '/login', '/register', '/landing'];
-const publicApiRoutes = ['/api/auth', '/api/register', '/api/webhooks', '/api/contact'];
+const publicRoutes = ['/', '/login', '/register', '/landing', '/pricing'];
+const publicApiRoutes = [
+  '/api/auth',
+  '/api/register',
+  '/api/webhooks',
+  '/api/billing/webhook', // Stripe webhook: verifies its own signature, no session
+  '/api/contact',
+];
 
 function isPublicRoute(path: string): boolean {
   return publicRoutes.some(route => path === route || path.startsWith(route + '/'));

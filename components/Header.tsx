@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Library, Menu, X, LogIn, LogOut, FileAudio } from 'lucide-react';
+import { Library, Menu, X, LogIn, LogOut, FileAudio, CreditCard } from 'lucide-react';
 import Logo from './Logo';
 import { LanguageToggle } from './LanguageToggle';
 import { useTranslations } from '@/contexts/TranslationsContext';
@@ -21,6 +21,7 @@ export const Header: React.FC = () => {
   const navItems = [
     { href: localePath('/transcribe', lang), label: t.header.transcribe, icon: FileAudio },
     { href: localePath('/library', lang), label: t.header.library, icon: Library },
+    { href: localePath('/account', lang), label: t.header?.account || 'Account', icon: CreditCard },
   ];
 
   const handleSignOut = async () => {
@@ -56,6 +57,13 @@ export const Header: React.FC = () => {
         )}
 
         <div className="flex items-center gap-2">
+          <Link
+            href={localePath('/pricing', lang)}
+            className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
+          >
+            <span>{t.header?.pricing || 'Pricing'}</span>
+          </Link>
+
           <LanguageToggle currentLang={lang} />
 
           {status === 'loading' ? (
@@ -91,6 +99,14 @@ export const Header: React.FC = () => {
       {mobileMenuOpen && (
         <nav className="md:hidden mt-3 pt-3 border-t border-slate-200">
           <div className="flex flex-col gap-1">
+            <Link
+              href={localePath('/pricing', lang)}
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
+            >
+              <span>{t.header?.pricing || 'Pricing'}</span>
+            </Link>
+
             {isAuthenticated && navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || pathname.startsWith(item.href);

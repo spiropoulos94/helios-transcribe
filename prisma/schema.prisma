@@ -18,6 +18,9 @@ model User {
   transcriptions    Transcription[]
   usageRecords      UsageRecord[]
   subscription      Subscription?
+  podcastFeeds      PodcastFeed[]
+  ownedWorkspaces   Workspace[]        @relation("WorkspaceOwner")
+  memberships       Membership[]
 }
 
 model GeneratedContent {
@@ -73,12 +76,104 @@ model Subscription {
   userId               String    @unique
   plan                 String    @default("free")
   status               String    @default("active")
+  interval             String? // "month" | "year"
+  seats                Int       @default(1)
+  cancelAtPeriodEnd    Boolean   @default(false)
   currentPeriodStart   DateTime?
   currentPeriodEnd     DateTime?
   stripeCustomerId     String?
   stripeSubscriptionId String?
+  stripePriceId        String?
+  stripeEventTs        Int? // unix seconds of the last applied Stripe subscription event (out-of-order guard)
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Idempotency ledger for Stripe webhooks: one row per processed event id.
+model ProcessedStripeEvent {
+  id        String   @id // Stripe event id (evt_...)
+  type      String
+  createdAt DateTime @default(now())
+}
+
+model PodcastFeed {
+  id              String    @id @default(cuid())
+  userId          String
+  url             String
+  title           String?
+  active          Boolean   @default(true)
+  lastPolledAt    DateTime?
+  lastPublishedAt DateTime? // cursor: newest episode pubDate already seen
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  episodes PodcastEpisode[]
+
+  @@unique([userId, url])
+  @@index([active])
+}
+
+model PodcastEpisode {
+  id              String    @id @default(cuid())
+  feedId          String
+  guid            String
+  title           String?
+  audioUrl        String
+  publishedAt     DateTime?
+  status          String    @default("pending") // pending | queued | skipped | done | failed
+  transcriptionId String?
+  createdAt       DateTime  @default(now())
+
+  feed PodcastFeed @relation(fields: [feedId], references: [id], onDelete: Cascade)
+
+  @@unique([feedId, guid])
+  @@index([feedId, status])
+}
+
+model Workspace {
+  id                   String   @id @default(cuid())
+  name                 String
+  ownerId              String
+  seats                Int      @default(1)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  owner       User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  memberships Membership[]
+  invites     WorkspaceInvite[]
+
+  @@index([ownerId])
+}
+
+model Membership {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        String   @default("member") // owner | admin | member
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+model WorkspaceInvite {
+  id          String    @id @default(cuid())
+  workspaceId String
+  email       String
+  role        String    @default("member")
+  token       String    @unique
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, email])
 }

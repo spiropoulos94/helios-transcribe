@@ -14,11 +14,14 @@ import {
 import Link from 'next/link';
 import { useTranslations } from '@/contexts/TranslationsContext';
 import { localePath } from '@/i18n/config';
+import { useEntitlements } from '@/lib/hooks/useEntitlements';
+import UpgradePrompt from '@/components/billing/UpgradePrompt';
 
 const PAGE_SIZE = 20;
 
 export default function LibraryPageClient() {
   const { t, lang } = useTranslations();
+  const { entitlements } = useEntitlements();
   const [transcriptions, setTranscriptions] = useState<TranscriptionListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -75,6 +78,11 @@ export default function LibraryPageClient() {
 
   const hasMore = nextCursor !== null;
 
+  // Free plan caps saved files. Storage is browser-only today, so this is a best-effort
+  // notice (see docs/billing.md §7) — nothing is deleted; the newest file stays usable.
+  const savedFilesLimit = entitlements.limits.savedFiles;
+  const overSavedFileLimit = savedFilesLimit !== null && total > savedFilesLimit;
+
   return (
     <div className="flex-1 bg-linear-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col">
       <ConfirmDialog
@@ -108,10 +116,24 @@ export default function LibraryPageClient() {
               className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
             >
               <Trash2 className="w-4 h-4" />
-              <span className="hidden sm:inline">{t.library.delete}</span>
+              <span className="hidden sm:inline">{t.library.deleteAll || 'Delete all'}</span>
             </button>
           )}
         </div>
+
+        {overSavedFileLimit && (
+          <div className="mb-6">
+            <UpgradePrompt
+              lang={lang}
+              requiredPlan="pro"
+              message={
+                lang === 'el'
+                  ? `Το δωρεάν πλάνο κρατά ${savedFilesLimit} αρχείο. Αναβαθμίστε για απεριόριστα αποθηκευμένα αρχεία.`
+                  : `The Free plan keeps ${savedFilesLimit} saved file. Upgrade for unlimited saved files.`
+              }
+            />
+          </div>
+        )}
 
         {/* Content */}
         {isLoading ? (

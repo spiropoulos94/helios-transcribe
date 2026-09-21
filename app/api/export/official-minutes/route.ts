@@ -5,6 +5,7 @@ import { buildOfficialMinutesPrompt } from '@/lib/export/officialMinutesPrompt';
 import { formatTranscriptionForMinutes } from '@/lib/export/formatTranscriptionForMinutes';
 import { aiConfig, pipelineConfig } from '@/lib/config';
 import { requireAuth } from '@/lib/auth-utils';
+import { requireMinPlan } from '@/lib/server/entitlementGuards';
 
 export async function POST(request: NextRequest): Promise<NextResponse<OfficialMinutesResponse>> {
   const startTime = Date.now();
@@ -13,6 +14,19 @@ export async function POST(request: NextRequest): Promise<NextResponse<OfficialM
   const authResult = await requireAuth();
   if (!authResult.authorized) {
     return authResult.response as NextResponse<OfficialMinutesResponse>;
+  }
+  const userId = authResult.session?.user?.id;
+  if (!userId) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // AI document generation is a Pro+ feature.
+  const guard = await requireMinPlan(userId, 'pro');
+  if (!guard.allowed) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.status }
+    );
   }
 
   try {

@@ -40,6 +40,24 @@ export const aiConfig = {
 } as const;
 
 /**
+ * Application-level configuration
+ */
+export const appConfig = {
+  /** Public base URL, used for Stripe redirect/return URLs. */
+  url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+} as const;
+
+/**
+ * Stripe configuration. Keys are read lazily where used; presence flags below let the
+ * UI degrade gracefully when billing is not configured in an environment.
+ */
+export const stripeConfig = {
+  secretKey: process.env.STRIPE_SECRET_KEY,
+  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+} as const;
+
+/**
  * Audio processing configuration
  */
 export const audioConfig = {

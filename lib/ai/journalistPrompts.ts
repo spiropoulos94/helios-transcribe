@@ -29,6 +29,8 @@ export interface AiGenerateResponse {
   markdown?: string;
   error?: string;
   processingTimeMs?: number;
+  /** When denied for entitlement reasons: the lowest plan that unlocks the tool. */
+  requiredPlan?: string | null;
 }
 
 /**
