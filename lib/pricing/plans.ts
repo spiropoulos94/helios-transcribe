@@ -98,7 +98,7 @@ export const pricingPlans: PricingPlan[] = [
     monthlyPrice: 19,
     annualPrice: 15,
     perSeat: true,
-    hoursLabel: { el: 'ανά θέση / μήνα', en: 'per seat / month' },
+    hoursLabel: { el: '30 ώρες / θέση', en: '30 hours / seat' },
     features: {
       el: [
         'Κοινό workspace για την ομάδα',

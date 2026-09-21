@@ -184,7 +184,19 @@
     "transcribe": "Transcribe",
     "library": "Library",
     "about": "About",
-    "pricing": "Pricing"
+    "pricing": "Pricing",
+    "account": "Account"
+  },
+  "billing": {
+    "title": "Billing & Plan",
+    "currentPlan": "Current plan",
+    "usageTitle": "Usage this period",
+    "unlimited": "Unlimited",
+    "resets": "Resets",
+    "manage": "Manage subscription",
+    "upgrade": "Change plan",
+    "choosePlan": "Choose a plan",
+    "features": "Your features"
   },
   "auth": {
     "login": "Sign In",

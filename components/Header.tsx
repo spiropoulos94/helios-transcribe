@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Library, Menu, X, LogIn, LogOut, FileAudio } from 'lucide-react';
+import { Library, Menu, X, LogIn, LogOut, FileAudio, CreditCard } from 'lucide-react';
 import Logo from './Logo';
 import { LanguageToggle } from './LanguageToggle';
 import { useTranslations } from '@/contexts/TranslationsContext';
@@ -21,6 +21,7 @@ export const Header: React.FC = () => {
   const navItems = [
     { href: localePath('/transcribe', lang), label: t.header.transcribe, icon: FileAudio },
     { href: localePath('/library', lang), label: t.header.library, icon: Library },
+    { href: localePath('/account', lang), label: t.header?.account || 'Account', icon: CreditCard },
   ];
 
   const handleSignOut = async () => {

@@ -4,7 +4,13 @@ import { useRef, useCallback, useMemo, useState } from 'react';
 import { SavedTranscription } from '@/lib/transcriptionStorage';
 import { resolveSegmentsForExport } from '@/lib/export/types';
 import { toSRT, toVTT, downloadSubtitles } from '@/lib/export/subtitleFormats';
+import { applyExportWatermark } from '@/lib/export/watermark';
 import { SPEAKER_COLORS, ColorScheme } from '@/lib/editor/speakerColors';
+import { useTranslations } from '@/contexts/TranslationsContext';
+import { useEntitlements } from '@/lib/hooks/useEntitlements';
+import { canExport, canUseAiTool, minPlanForAiTool } from '@/lib/billing/entitlements';
+import type { PlanId } from '@/lib/pricing/plans';
+import UpgradePrompt from '@/components/billing/UpgradePrompt';
 import { useEditorKeyboardShortcuts } from '@/lib/hooks/useEditorKeyboardShortcuts';
 import { useEditorState } from '@/lib/hooks/useEditorState';
 import { useHighlights } from '@/lib/hooks/useHighlights';
@@ -42,6 +48,11 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
   const [showOfficialMinutesDialog, setShowOfficialMinutesDialog] = useState(false);
   const [showPressReleaseDialog, setShowPressReleaseDialog] = useState(false);
   const [activeAiTool, setActiveAiTool] = useState<AiToolType | null>(null);
+  const [gate, setGate] = useState<{ requiredPlan: PlanId | null } | null>(null);
+
+  const { lang } = useTranslations();
+  const { entitlements } = useEntitlements();
+  const isPaidTier = entitlements.features.aiTools.length > 0; // Pro+ (AI documents)
 
   const segments = useMemo(() => {
     const rawSegments = transcription.metadata?.structuredData?.segments || [];
@@ -114,7 +125,7 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
   }, [segments]);
 
   const handleExportPlainText = useCallback(() => {
-    const exportText = segments
+    let exportText = segments
       .map((segment, index) => {
         const edit = editorState.edits.find((e) => e.segmentIndex === index);
         const text = edit?.editedText || segment.text;
@@ -122,6 +133,11 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
         return `${speakerName} [${formatTime(segment.startTime)} - ${formatTime(segment.endTime)}]:\n${text}\n`;
       })
       .join('\n');
+
+    // Free plan → watermark txt/pdf/docx exports (best-effort, client-side).
+    if (entitlements.features.watermark) {
+      exportText = applyExportWatermark(exportText, lang);
+    }
 
     const blob = new Blob([exportText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -132,21 +148,33 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [segments, editorState.edits, transcription.fileName, getSpeakerDisplayName]);
+  }, [segments, editorState.edits, transcription.fileName, getSpeakerDisplayName, entitlements.features.watermark, lang]);
 
   const handleExportSrt = useCallback(() => {
+    if (!canExport(entitlements, 'srt')) {
+      setGate({ requiredPlan: 'pro' });
+      return;
+    }
     const resolved = resolveSegmentsForExport(segments, editorState.edits, getSpeakerDisplayName);
     const content = toSRT(resolved);
     downloadSubtitles(content, transcription.fileName.replace(/\.[^/.]+$/, ''), 'srt');
-  }, [segments, editorState.edits, transcription.fileName, getSpeakerDisplayName]);
+  }, [segments, editorState.edits, transcription.fileName, getSpeakerDisplayName, entitlements]);
 
   const handleExportVtt = useCallback(() => {
+    if (!canExport(entitlements, 'vtt')) {
+      setGate({ requiredPlan: 'pro' });
+      return;
+    }
     const resolved = resolveSegmentsForExport(segments, editorState.edits, getSpeakerDisplayName);
     const content = toVTT(resolved);
     downloadSubtitles(content, transcription.fileName.replace(/\.[^/.]+$/, ''), 'vtt');
-  }, [segments, editorState.edits, transcription.fileName, getSpeakerDisplayName]);
+  }, [segments, editorState.edits, transcription.fileName, getSpeakerDisplayName, entitlements]);
 
   const handleExportQuotes = useCallback(() => {
+    if (!entitlements.features.highlights) {
+      setGate({ requiredPlan: 'pro' });
+      return;
+    }
     const exportText = buildQuotesExport(
       segments,
       editorState.edits,
@@ -163,20 +191,39 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [segments, editorState.edits, getSpeakerDisplayName, highlighted, transcription.fileName]);
+  }, [segments, editorState.edits, getSpeakerDisplayName, highlighted, transcription.fileName, entitlements]);
 
   const handleExportOfficialMinutes = useCallback(() => {
+    if (!isPaidTier) {
+      setGate({ requiredPlan: 'pro' });
+      return;
+    }
     setShowOfficialMinutesDialog(true);
-  }, []);
+  }, [isPaidTier]);
 
   const handleExportPressRelease = useCallback(() => {
+    if (!isPaidTier) {
+      setGate({ requiredPlan: 'pro' });
+      return;
+    }
     setShowPressReleaseDialog(true);
-  }, []);
+  }, [isPaidTier]);
 
-  const handleAiSummary = useCallback(() => setActiveAiTool('summary'), []);
-  const handleAiArticle = useCallback(() => setActiveAiTool('article'), []);
-  const handleAiShowNotes = useCallback(() => setActiveAiTool('show-notes'), []);
-  const handleAiClips = useCallback(() => setActiveAiTool('clips'), []);
+  const openAiTool = useCallback(
+    (tool: AiToolType) => {
+      if (!canUseAiTool(entitlements, tool)) {
+        setGate({ requiredPlan: minPlanForAiTool(tool) });
+        return;
+      }
+      setActiveAiTool(tool);
+    },
+    [entitlements]
+  );
+
+  const handleAiSummary = useCallback(() => openAiTool('summary'), [openAiTool]);
+  const handleAiArticle = useCallback(() => openAiTool('article'), [openAiTool]);
+  const handleAiShowNotes = useCallback(() => openAiTool('show-notes'), [openAiTool]);
+  const handleAiClips = useCallback(() => openAiTool('clips'), [openAiTool]);
 
   const handleKeyboardEdit = useCallback(() => {
     if (activeSegmentIndex !== null) {
@@ -345,6 +392,30 @@ export default function TranscriptionEditor({ transcription }: TranscriptionEdit
           fileName={transcription.fileName}
           transcriptionId={transcription.id}
         />
+      )}
+
+      {/* Upgrade prompt for gated actions (client-side UX; server re-checks). */}
+      {gate && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setGate(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-slate-900 mb-3">
+              {lang === 'el' ? 'Αναβαθμίστε το πλάνο σας' : 'Upgrade your plan'}
+            </h3>
+            <UpgradePrompt lang={lang} requiredPlan={gate.requiredPlan} />
+            <button
+              onClick={() => setGate(null)}
+              className="mt-4 w-full py-2 rounded-lg text-sm font-medium bg-slate-100 hover:bg-slate-200 text-slate-700"
+            >
+              {lang === 'el' ? 'Κλείσιμο' : 'Close'}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
