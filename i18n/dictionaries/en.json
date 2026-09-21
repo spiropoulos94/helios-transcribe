@@ -183,7 +183,8 @@
   "header": {
     "transcribe": "Transcribe",
     "library": "Library",
-    "about": "About"
+    "about": "About",
+    "pricing": "Pricing"
   },
   "auth": {
     "login": "Sign In",

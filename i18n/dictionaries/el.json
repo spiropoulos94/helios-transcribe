@@ -183,7 +183,8 @@
   "header": {
     "transcribe": "Νέα Μεταγραφή",
     "library": "Αρχείο",
-    "about": "Σχετικά"
+    "about": "Σχετικά",
+    "pricing": "Τιμές"
   },
   "auth": {
     "login": "Σύνδεση",
