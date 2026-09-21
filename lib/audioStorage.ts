@@ -1,6 +1,19 @@
 /**
- * IndexedDB wrapper for storing and retrieving audio files
- * Provides persistent storage for audio files associated with transcriptions
+ * ⚠️  TEMPORARY — BROWSER-ONLY AUDIO STORAGE (pre-launch v1)
+ * ---------------------------------------------------------------------------
+ * Audio files are stored as Blobs ONLY in the user's browser (IndexedDB). This
+ * is a deliberate stopgap chosen while the product has no real users yet.
+ *
+ * 🚨 WE ABSOLUTELY NEED TO CHANGE THIS before onboarding real users. 🚨
+ * Audio only plays on the device that uploaded it, is lost on a cache clear,
+ * and bloats the browser storage quota. The plan is object storage
+ * (e.g. Cloudflare R2 / S3), referenced by URL from the Transcription record.
+ *
+ * Do NOT build features that assume this local store is permanent.
+ * ---------------------------------------------------------------------------
+ *
+ * IndexedDB wrapper for storing and retrieving audio files.
+ * Provides persistent storage for audio files associated with transcriptions.
  */
 
 const DB_NAME = 'grecho-audio-storage';

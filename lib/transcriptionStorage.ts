@@ -1,6 +1,20 @@
 /**
- * IndexedDB wrapper for storing and retrieving transcriptions
- * Replaces localStorage to avoid quota limits with large transcriptions
+ * ⚠️  TEMPORARY — BROWSER-ONLY STORAGE (pre-launch v1)
+ * ---------------------------------------------------------------------------
+ * Every transcription lives ONLY in the user's browser (IndexedDB). This is a
+ * deliberate stopgap chosen while the product has no real users yet.
+ *
+ * 🚨 WE ABSOLUTELY NEED TO CHANGE THIS before onboarding real users. 🚨
+ * Data here is lost on a cache clear and never leaves the device — there is no
+ * cross-device access and no real backup. The plan is server-side storage:
+ * transcripts/edits/metadata → Postgres, audio → object storage (e.g. R2/S3).
+ * A started server API/repo lives on the `feat/server-persistence` branch.
+ *
+ * Do NOT build features that assume this local store is permanent.
+ * ---------------------------------------------------------------------------
+ *
+ * IndexedDB wrapper for storing and retrieving transcriptions.
+ * Replaces localStorage to avoid quota limits with large transcriptions.
  */
 
 import { StructuredTranscription } from './ai/types';
