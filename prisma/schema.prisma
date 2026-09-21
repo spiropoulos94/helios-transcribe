@@ -15,6 +15,9 @@ model User {
   updatedAt    DateTime @updatedAt
 
   generatedContents GeneratedContent[]
+  transcriptions    Transcription[]
+  usageRecords      UsageRecord[]
+  subscription      Subscription?
 }
 
 model GeneratedContent {
@@ -30,4 +33,52 @@ model GeneratedContent {
 
   @@unique([userId, transcriptionId, type])
   @@index([userId, transcriptionId])
+}
+
+model Transcription {
+  id               String   @id @default(cuid())
+  userId           String
+  fileName         String
+  text             String
+  provider         String?
+  model            String?
+  wordCount        Int?
+  durationSeconds  Int?
+  processingTimeMs Int?
+  rawJson          String?
+  editorState      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model UsageRecord {
+  id              String   @id @default(cuid())
+  userId          String
+  durationSeconds Int
+  costUsd         Float?
+  provider        String?
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  plan                 String    @default("free")
+  status               String    @default("active")
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
