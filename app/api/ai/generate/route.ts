@@ -9,6 +9,7 @@ import {
 import { formatTranscriptionForMinutes } from '@/lib/export/formatTranscriptionForMinutes';
 import { aiConfig, pipelineConfig } from '@/lib/config';
 import { requireAuth } from '@/lib/auth-utils';
+import { requireAiTool } from '@/lib/server/entitlementGuards';
 
 export async function POST(request: NextRequest): Promise<NextResponse<AiGenerateResponse>> {
   const startTime = Date.now();
@@ -17,6 +18,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<AiGenerat
   const authResult = await requireAuth();
   if (!authResult.authorized) {
     return authResult.response as NextResponse<AiGenerateResponse>;
+  }
+  const userId = authResult.session?.user?.id;
+  if (!userId) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
@@ -52,6 +57,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<AiGenerat
           error: 'Missing or invalid tool type',
         },
         { status: 400 }
+      );
+    }
+
+    // Enforce plan entitlement for this tool (summary/article → Pro+, show-notes/clips → Creator+).
+    const guard = await requireAiTool(userId, body.type);
+    if (!guard.allowed) {
+      return NextResponse.json(
+        { success: false, error: guard.error, requiredPlan: guard.requiredPlan },
+        { status: guard.status }
       );
     }
 
